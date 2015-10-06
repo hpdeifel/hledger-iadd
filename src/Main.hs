@@ -59,6 +59,7 @@ event as ev = case ev of
                                            , asMessage = ""}
   EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
                                            , asMessage = ""}
+  EvKey (KChar 'c') [MCtrl] -> liftIO (reset as) >>= continue
   EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
   EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
   _ -> setContext <$>
@@ -70,6 +71,17 @@ event as ev = case ev of
                  <*> return ""
                  <*> return (asFilename as))
        >>= continue
+
+reset :: AppState -> IO AppState
+reset as = do
+  sugg <- suggest (asJournal as) DateQuestion
+  return as
+    { asStep = DateQuestion
+    , asEditor = clearEdit (asEditor as)
+    , asContext = ctxList V.empty
+    , asSuggestion = sugg
+    , asMessage = "Transaction aborted"
+    }
 
 setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromList $
   context (asJournal as) (editText as) (asStep as) }
