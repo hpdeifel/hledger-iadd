@@ -23,6 +23,8 @@ viewState (AccountQuestion2 acc trans) = str $ concat $
   [ HL.showTransaction trans
   , "  " ++ acc
   ]
+viewState (FinalQuestion trans) = str $
+  HL.showTransaction trans
 
 viewQuestion :: Step -> Widget
 viewQuestion DateQuestion = txt "Date"
@@ -31,6 +33,8 @@ viewQuestion (AccountQuestion1 trans) = str $
   "Account " ++ show (numPostings trans + 1)
 viewQuestion (AccountQuestion2 _ trans) = str $
   "Amount " ++ show (numPostings trans + 1)
+viewQuestion (FinalQuestion _) = txt $
+  "Add this transaction to the journal? Y/n"
 
 viewContext :: List Text -> Widget
 viewContext = flip renderList renderItem

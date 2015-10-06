@@ -11,21 +11,28 @@ data Step = DateQuestion
           | DescriptionQuestion Day
           | AccountQuestion1 HL.Transaction
           | AccountQuestion2 HL.AccountName HL.Transaction
+          | FinalQuestion HL.Transaction
 
 
-nextStep :: Text -> Step -> IO Step
+nextStep :: Text -> Step -> IO (Either HL.Transaction Step)
 nextStep entryText current = case current of
   DateQuestion -> parseTime entryText >>= \case
-    Nothing -> return current -- TODO Show error
-    Just day -> return (DescriptionQuestion day)
-  DescriptionQuestion day -> return $
+    Nothing -> return $ Right current -- TODO Show error
+    Just day -> return $ Right (DescriptionQuestion day)
+  DescriptionQuestion day -> return $ Right $
     AccountQuestion1 (HL.nulltransaction { HL.tdate = day
                                          , HL.tdescription = (T.unpack entryText)})
-  AccountQuestion1 trans -> return $
-    AccountQuestion2 (T.unpack entryText) trans
-  AccountQuestion2 name trans -> return $
+  AccountQuestion1 trans
+    | T.null entryText -> return $ Right $ FinalQuestion trans
+    | otherwise        -> return $ Right $
+      AccountQuestion2 (T.unpack entryText) trans
+  AccountQuestion2 name trans -> return $ Right $
     let newPosting = HL.post name (parseAmount entryText)
     in AccountQuestion1 (addPosting newPosting trans)
+
+  FinalQuestion trans
+    | entryText == "y" -> return $ Left trans
+    | otherwise -> return $ Right $ AccountQuestion1 trans
 
 context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
@@ -36,6 +43,7 @@ context j entryText (AccountQuestion1 _) =
   let names = map T.pack $ HL.journalAccountNames j
   in filterIfNotEmpty entryText matches names
 context _ _ (AccountQuestion2 _ _) = []
+context _ _  (FinalQuestion _) = []
 
 filterIfNotEmpty t f l
   | T.null t = []
@@ -46,7 +54,10 @@ suggest _ DateQuestion =
   Just . T.pack . formatTime defaultTimeLocale "%d.%m.%y" <$> getCurrentTime
 suggest _ (DescriptionQuestion _) = return Nothing
 suggest _ (AccountQuestion1 _) = return Nothing
-suggest _ (AccountQuestion2 _ _) = return Nothing
+suggest _ (AccountQuestion2 _ trans) =
+  let (rsum, _, _) = HL.transactionPostingBalances trans
+  in return $ Just $ T.pack $ HL.showMixedAmount (HL.divideMixedAmount rsum (-1))
+suggest _ (FinalQuestion _) = return $ Just "y"
 
 matches :: Text -> Text -> Bool
 matches a b = matches' (T.toCaseFold a) (T.toCaseFold b)

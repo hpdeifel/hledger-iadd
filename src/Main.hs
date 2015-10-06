@@ -76,14 +76,25 @@ doNextStep useSelected as = do
                     , asMaybe (editText as)
                     , asSuggestion as
                     ]
-  s' <- nextStep name (asStep as)
-  sugg <- suggest (asJournal as) s'
-  let ctx' = ctxList $ V.fromList $ context (asJournal as) "" s'
-  return as { asStep = s'
-            , asEditor = clearEdit (asEditor as)
-            , asContext = ctx'
-            , asSuggestion = sugg
-            }
+  s <- nextStep name (asStep as)
+  case s of
+    Left trans -> do
+      sugg <- suggest (asJournal as) DateQuestion
+      return AppState
+        { asStep = DateQuestion
+        , asJournal = HL.addTransaction trans (asJournal  as)
+        , asEditor = clearEdit (asEditor as)
+        , asContext = ctxList V.empty
+        , asSuggestion = sugg
+        }
+    Right s' -> do
+      sugg <- suggest (asJournal as) s'
+      let ctx' = ctxList $ V.fromList $ context (asJournal as) "" s'
+      return as { asStep = s'
+                , asEditor = clearEdit (asEditor as)
+                , asContext = ctx'
+                , asSuggestion = sugg
+                }
 
 asMaybe :: Text -> Maybe Text
 asMaybe t
