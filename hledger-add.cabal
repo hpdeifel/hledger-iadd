@@ -24,5 +24,7 @@ executable hledger-add
                      , text
                      , lens
                      , text-zipper
+                     , transformers
+                     , time
 
   ghc-options:         -threaded
