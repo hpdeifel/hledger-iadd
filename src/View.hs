@@ -28,12 +28,16 @@ viewQuestion :: Step -> Widget
 viewQuestion DateQuestion = txt "Date: "
 viewQuestion (DescriptionQuestion _) = txt "Description: "
 viewQuestion (AccountQuestion1 trans) = str $
-  "Account" ++ show (numPostings trans) ++ ": "
+  "Account " ++ show (numPostings trans + 1) ++ ": "
 viewQuestion (AccountQuestion2 _ trans) = str $
-  "Amount" ++ show (numPostings trans) ++ ": "
+  "Amount " ++ show (numPostings trans + 1) ++ ": "
 
 viewContext :: List Text -> Widget
-viewContext = flip renderList (\_ -> txt)
+viewContext = flip renderList renderItem
+
+renderItem :: Bool -> Text -> Widget
+renderItem True = withAttr listSelectedAttr . txt
+renderItem False = txt
 
 numPostings :: HL.Transaction -> Int
 numPostings = length . HL.tpostings

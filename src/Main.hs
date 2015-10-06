@@ -7,6 +7,7 @@ import           Brick.Widgets.Border
 import           Brick.Widgets.Edit
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
+import           Graphics.Vty
 
 import           Control.Lens
 import           Control.Monad
@@ -20,7 +21,6 @@ import qualified Data.Text as T
 import           Data.Text.Zipper
 import           Data.Time hiding (parseTime)
 import qualified Data.Vector as V
-import           Graphics.Vty.Input.Events
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
 import           System.Environment
@@ -49,6 +49,8 @@ draw as = [ui]
 event :: AppState -> Event -> EventM (Next AppState)
 event as ev = case ev of
   EvKey KEsc [] -> halt as
+  EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as }
+  EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as }
   EvKey KEnter [] -> liftIO (doNextStep as) >>= continue
   _ -> setContext <$>
        (AppState <$> handleEvent ev (asEditor as)
@@ -71,6 +73,9 @@ doNextStep as = do
             , asContext = ctx'
             }
 
+attrs = attrMap defAttr
+  [ (listSelectedAttr, black `on` white) ]
+
 clearEdit edit = edit & editContentsL .~ stringZipper [""] (Just 1)
 
 ledgerPath home = home <> "/.hledger.journal"
@@ -90,7 +95,7 @@ main = do
   where app = App { appDraw = draw
                   , appChooseCursor = showFirstCursor
                   , appHandleEvent = event
-                  , appAttrMap = const def
+                  , appAttrMap = const attrs
                   , appLiftVtyEvent = id
                   , appStartEvent = return
                   } :: App AppState Event
