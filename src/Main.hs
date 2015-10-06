@@ -94,7 +94,7 @@ doNextStep useSelected as = do
         , asEditor = clearEdit (asEditor as)
         , asContext = ctxList V.empty
         , asSuggestion = sugg
-        , asMessage = ""
+        , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
         }
     Right (Step s') -> do
