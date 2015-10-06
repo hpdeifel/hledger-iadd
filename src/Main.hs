@@ -33,6 +33,7 @@ data AppState = AppState
   , asStep :: Step
   , asJournal :: HL.Journal
   , asContext :: List Text
+  , asSuggestion :: Maybe Text
   }
 
 
@@ -40,7 +41,10 @@ draw :: AppState -> [Widget]
 draw as = [ui]
   where ui =  viewState (asStep as)
           <=> hBorder
-          <=> (viewQuestion (asStep as) <+> renderEditor (asEditor as))
+          <=> (viewQuestion (asStep as)
+               <+> viewSuggestion (asSuggestion as)
+               <+> txt ": "
+               <+> renderEditor (asEditor as))
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
@@ -51,12 +55,14 @@ event as ev = case ev of
   EvKey KEsc [] -> halt as
   EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as }
   EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as }
-  EvKey KEnter [] -> liftIO (doNextStep as) >>= continue
+  EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
+  EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
   _ -> setContext <$>
        (AppState <$> handleEvent ev (asEditor as)
                  <*> return (asStep as)
                  <*> return (asJournal as)
-                 <*> return (asContext as))
+                 <*> return (asContext as)
+                 <*> return (asSuggestion as))
        >>= continue
 
 setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromList $
@@ -64,14 +70,25 @@ setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromL
 
 editText = T.pack . concat . getEditContents . asEditor
 
-doNextStep as = do
-  let name = fromMaybe (editText as) (snd <$> listSelectedElement (asContext as))
+doNextStep useSelected as = do
+  let name = fromMaybe (editText as) $
+               msum [ if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
+                    , asMaybe (editText as)
+                    , asSuggestion as
+                    ]
   s' <- nextStep name (asStep as)
+  sugg <- suggest (asJournal as) s'
   let ctx' = ctxList $ V.fromList $ context (asJournal as) "" s'
   return as { asStep = s'
             , asEditor = clearEdit (asEditor as)
             , asContext = ctx'
+            , asSuggestion = sugg
             }
+
+asMaybe :: Text -> Maybe Text
+asMaybe t
+  | T.null t  = Nothing
+  | otherwise = Just t
 
 attrs = attrMap defAttr
   [ (listSelectedAttr, black `on` white) ]
@@ -88,7 +105,10 @@ main = do
   Right journal <- runExceptT $ HL.parseJournalWith HL.journal True path journalContents
 
   let edit = editor "Edit" (str . concat) (Just 1) ""
-      as = AppState edit DateQuestion journal (ctxList V.empty)
+
+  sugg <- suggest journal DateQuestion
+
+  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg
 
   void $ defaultMain app as
 

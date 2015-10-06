@@ -29,13 +29,24 @@ nextStep entryText current = case current of
 
 context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
-context _ _ (DescriptionQuestion _) = []
+context j entryText (DescriptionQuestion _) =
+  let descs = map T.pack $ HL.journalDescriptions j
+  in filterIfNotEmpty entryText matches descs
 context j entryText (AccountQuestion1 _) =
   let names = map T.pack $ HL.journalAccountNames j
-  in if T.null entryText
-     then []
-     else filter (matches entryText) names
+  in filterIfNotEmpty entryText matches names
 context _ _ (AccountQuestion2 _ _) = []
+
+filterIfNotEmpty t f l
+  | T.null t = []
+  | otherwise = filter (f t) l
+
+suggest :: HL.Journal -> Step -> IO (Maybe Text)
+suggest _ DateQuestion =
+  Just . T.pack . formatTime defaultTimeLocale "%d.%m.%y" <$> getCurrentTime
+suggest _ (DescriptionQuestion _) = return Nothing
+suggest _ (AccountQuestion1 _) = return Nothing
+suggest _ (AccountQuestion2 _ _) = return Nothing
 
 matches :: Text -> Text -> Bool
 matches a b = matches' (T.toCaseFold a) (T.toCaseFold b)

@@ -25,15 +25,19 @@ viewState (AccountQuestion2 acc trans) = str $ concat $
   ]
 
 viewQuestion :: Step -> Widget
-viewQuestion DateQuestion = txt "Date: "
-viewQuestion (DescriptionQuestion _) = txt "Description: "
+viewQuestion DateQuestion = txt "Date"
+viewQuestion (DescriptionQuestion _) = txt "Description"
 viewQuestion (AccountQuestion1 trans) = str $
-  "Account " ++ show (numPostings trans + 1) ++ ": "
+  "Account " ++ show (numPostings trans + 1)
 viewQuestion (AccountQuestion2 _ trans) = str $
-  "Amount " ++ show (numPostings trans + 1) ++ ": "
+  "Amount " ++ show (numPostings trans + 1)
 
 viewContext :: List Text -> Widget
 viewContext = flip renderList renderItem
+
+viewSuggestion :: Maybe Text -> Widget
+viewSuggestion Nothing = txt ""
+viewSuggestion (Just t) = txt $ " (" <> t <> ")"
 
 renderItem :: Bool -> Text -> Widget
 renderItem True = withAttr listSelectedAttr . txt
