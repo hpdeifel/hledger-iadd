@@ -35,6 +35,7 @@ data AppState = AppState
   , asContext :: List Text
   , asSuggestion :: Maybe Text
   , asMessage :: Text
+  , asFilename :: FilePath
   }
 
 
@@ -66,7 +67,8 @@ event as ev = case ev of
                  <*> return (asJournal as)
                  <*> return (asContext as)
                  <*> return (asSuggestion as)
-                 <*> return "")
+                 <*> return ""
+                 <*> return (asFilename as))
        >>= continue
 
 setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromList $
@@ -84,6 +86,7 @@ doNextStep useSelected as = do
   case s of
     Left err -> return as { asMessage = err }
     Right (Finished trans) -> do
+      liftIO $ addToJournal trans (asFilename as)
       sugg <- suggest (asJournal as) DateQuestion
       return AppState
         { asStep = DateQuestion
@@ -92,6 +95,7 @@ doNextStep useSelected as = do
         , asContext = ctxList V.empty
         , asSuggestion = sugg
         , asMessage = ""
+        , asFilename = asFilename as
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) s'
@@ -112,6 +116,9 @@ attrs = attrMap defAttr
 
 clearEdit edit = edit & editContentsL .~ stringZipper [""] (Just 1)
 
+addToJournal :: HL.Transaction -> FilePath -> IO ()
+addToJournal trans path = appendFile path (show trans)
+
 ledgerPath home = home <> "/.hledger.journal"
 
 main :: IO ()
@@ -125,7 +132,7 @@ main = do
 
   sugg <- suggest journal DateQuestion
 
-  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome"
+  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome" path
 
   void $ defaultMain app as
 
