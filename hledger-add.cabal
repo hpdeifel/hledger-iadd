@@ -30,5 +30,6 @@ executable hledger-add
                      , transformers
                      , time
                      , vector
+                     , parsec
 
   ghc-options:         -threaded

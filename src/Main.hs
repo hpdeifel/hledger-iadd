@@ -34,6 +34,7 @@ data AppState = AppState
   , asJournal :: HL.Journal
   , asContext :: List Text
   , asSuggestion :: Maybe Text
+  , asMessage :: Text
   }
 
 
@@ -48,13 +49,15 @@ draw as = [ui]
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
-          <=> str "A message area"
+          <=> txt (asMessage as <> " ") -- TODO Add space only if message is empty
 
 event :: AppState -> Event -> EventM (Next AppState)
 event as ev = case ev of
   EvKey KEsc [] -> halt as
-  EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as }
-  EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as }
+  EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
+                                           , asMessage = ""}
+  EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
+                                           , asMessage = ""}
   EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
   EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
   _ -> setContext <$>
@@ -62,7 +65,8 @@ event as ev = case ev of
                  <*> return (asStep as)
                  <*> return (asJournal as)
                  <*> return (asContext as)
-                 <*> return (asSuggestion as))
+                 <*> return (asSuggestion as)
+                 <*> return "")
        >>= continue
 
 setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromList $
@@ -78,7 +82,8 @@ doNextStep useSelected as = do
                     ]
   s <- nextStep name (asStep as)
   case s of
-    Left trans -> do
+    Left err -> return as { asMessage = err }
+    Right (Finished trans) -> do
       sugg <- suggest (asJournal as) DateQuestion
       return AppState
         { asStep = DateQuestion
@@ -86,8 +91,9 @@ doNextStep useSelected as = do
         , asEditor = clearEdit (asEditor as)
         , asContext = ctxList V.empty
         , asSuggestion = sugg
+        , asMessage = ""
         }
-    Right s' -> do
+    Right (Step s') -> do
       sugg <- suggest (asJournal as) s'
       let ctx' = ctxList $ V.fromList $ context (asJournal as) "" s'
       return as { asStep = s'
@@ -119,7 +125,7 @@ main = do
 
   sugg <- suggest journal DateQuestion
 
-  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg
+  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome"
 
   void $ defaultMain app as
 

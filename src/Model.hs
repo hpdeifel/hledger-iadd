@@ -4,8 +4,10 @@ module Model where
 
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Read as T
 import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
+import           Text.Parsec
 
 data Step = DateQuestion
           | DescriptionQuestion Day
@@ -14,25 +16,30 @@ data Step = DateQuestion
           | FinalQuestion HL.Transaction
 
 
-nextStep :: Text -> Step -> IO (Either HL.Transaction Step)
+data MaybeStep = Finished HL.Transaction
+               | Step Step
+
+nextStep :: Text -> Step -> IO (Either Text MaybeStep)
 nextStep entryText current = case current of
   DateQuestion -> parseTime entryText >>= \case
-    Nothing -> return $ Right current -- TODO Show error
-    Just day -> return $ Right (DescriptionQuestion day)
-  DescriptionQuestion day -> return $ Right $
+    Nothing -> return $ Left "Could not parse date. Format: %d[.%m[.%Y]]"
+    Just day -> return $ Right $ Step (DescriptionQuestion day)
+  DescriptionQuestion day -> return $ Right $ Step $
     AccountQuestion1 (HL.nulltransaction { HL.tdate = day
                                          , HL.tdescription = (T.unpack entryText)})
   AccountQuestion1 trans
-    | T.null entryText -> return $ Right $ FinalQuestion trans
-    | otherwise        -> return $ Right $
+    | T.null entryText -> return $ Right $ Step $ FinalQuestion trans
+    | otherwise        -> return $ Right $ Step $
       AccountQuestion2 (T.unpack entryText) trans
-  AccountQuestion2 name trans -> return $ Right $
-    let newPosting = HL.post name (parseAmount entryText)
-    in AccountQuestion1 (addPosting newPosting trans)
+  AccountQuestion2 name trans -> case parseAmount entryText of
+    Left err -> return $ Left (T.pack err)
+    Right amount -> return $ Right $ Step $
+      let newPosting = HL.post name amount
+      in AccountQuestion1 (addPosting newPosting trans)
 
   FinalQuestion trans
-    | entryText == "y" -> return $ Left trans
-    | otherwise -> return $ Right $ AccountQuestion1 trans
+    | entryText == "y" -> return $ Right $ Finished trans
+    | otherwise -> return $ Right $ Step $ AccountQuestion1 trans
 
 context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
@@ -67,18 +74,18 @@ parseTime :: Text -> IO (Maybe Day)
 parseTime t = do
   (currentYear, currentMonth, _) <- toGregorian . utctDay <$> getCurrentTime
   case filter (not . T.null) $ T.splitOn "." t of
-    [d] -> return $ Just $ fromGregorian currentYear currentMonth (parseInt d)
-    [d,m] -> return $ Just $ fromGregorian currentYear (parseInt m) (parseInt d)
-    [d,m,y] -> return $ Just $ fromGregorian (parseInt y) (parseInt m) (parseInt d)
+    [d] -> return $ fromGregorian currentYear currentMonth <$> parseInt d
+    [d,m] -> return $ fromGregorian currentYear <$> parseInt m <*> parseInt d
+    [d,m,y] -> return $ fromGregorian <$> parseInt y <*> parseInt m <*> parseInt d
     _ -> return Nothing
 
--- TODO: Handle failure
-parseInt :: (Read a, Num a) => Text -> a
-parseInt t = read $ T.unpack t
+parseInt :: (Read a, Integral a) => Text -> Maybe a
+parseInt t = either (const Nothing) (Just . fst) $ T.decimal t
 
--- TODO Handle failure
-parseAmount :: Text -> HL.Amount
-parseAmount = HL.amountp' . T.unpack
+parseAmount :: Text -> Either String HL.Amount
+parseAmount t = case runParser (HL.amountp <* eof) HL.nullctx "" (T.unpack t) of
+  Left err -> Left (show err)
+  Right res -> Right res
 
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = p : HL.tpostings t }
