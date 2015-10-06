@@ -58,7 +58,7 @@ filterIfNotEmpty t f l
 
 suggest :: HL.Journal -> Step -> IO (Maybe Text)
 suggest _ DateQuestion =
-  Just . T.pack . formatTime defaultTimeLocale "%d.%m.%y" <$> getCurrentTime
+  Just . T.pack . formatTime defaultTimeLocale "%d.%m.%Y" <$> getCurrentTime
 suggest _ (DescriptionQuestion _) = return Nothing
 suggest _ (AccountQuestion1 _) = return Nothing
 suggest _ (AccountQuestion2 _ trans) =
