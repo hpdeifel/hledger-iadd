@@ -2,6 +2,8 @@
 
 module Model where
 
+import           Data.Function
+import           Data.List
 import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -64,7 +66,8 @@ suggest :: HL.Journal -> Step -> IO (Maybe Text)
 suggest _ DateQuestion =
   Just . T.pack . formatTime defaultTimeLocale "%d.%m.%Y" <$> getCurrentTime
 suggest _ (DescriptionQuestion _) = return Nothing
-suggest _ (AccountQuestion1 _) = return Nothing
+suggest journal (AccountQuestion1 trans) = return $
+  suggestAccount journal (length $ HL.tpostings trans) (T.pack $ HL.tdescription trans)
 suggest _ (AccountQuestion2 _ trans) =
   let (rsum, _, _) = HL.transactionPostingBalances trans
   in return $ Just $ T.pack $ HL.showMixedAmount (HL.divideMixedAmount rsum (-1))
@@ -96,3 +99,23 @@ addPosting p t = t { HL.tpostings = p : HL.tpostings t }
 
 trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
 trySumAmount context = either (const Nothing) Just . parseAmount context
+
+suggestAccount :: HL.Journal -> Int -> Text -> Maybe Text
+suggestAccount journal num desc = T.pack <$>
+  (nthAccountName num =<< findLastSimilar journal desc)
+
+findLastSimilar :: HL.Journal -> Text -> Maybe HL.Transaction
+findLastSimilar journal desc =
+  maximumBy (compare `on` HL.tdate) <$>
+    listToMaybe' (filter ((==desc) . T.pack . HL.tdescription) $ HL.jtxns journal)
+
+nthAccountName :: Int -> HL.Transaction -> Maybe HL.AccountName
+nthAccountName num = safeIdx num . map HL.paccount . HL.tpostings
+
+listToMaybe' [] = Nothing
+listToMaybe' ls = Just ls
+
+safeIdx :: Int -> [a] -> Maybe a
+safeIdx _ [] = Nothing
+safeIdx 0 (l:_) = Just l
+safeIdx n (_:ls) = safeIdx (n-1) ls
