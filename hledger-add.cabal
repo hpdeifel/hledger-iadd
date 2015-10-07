@@ -17,6 +17,7 @@ executable hledger-add
   main-is:             Main.hs
   other-modules:       Model
                      , View
+                     , AmountParser
                      , Brick.Widgets.List.Utils
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5

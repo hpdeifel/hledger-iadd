@@ -9,6 +9,8 @@ import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
 import           Text.Parsec
 
+import AmountParser
+
 data Step = DateQuestion
           | DescriptionQuestion Day
           | AccountQuestion1 HL.Transaction
@@ -34,7 +36,7 @@ nextStep entryText current = case current of
   AccountQuestion2 name trans -> case parseAmount entryText of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
-      let newPosting = HL.post name amount
+      let newPosting = post' name amount
       in AccountQuestion1 (addPosting newPosting trans)
 
   FinalQuestion trans
@@ -82,10 +84,10 @@ parseTime t = do
 parseInt :: (Read a, Integral a) => Text -> Maybe a
 parseInt t = either (const Nothing) (Just . fst) $ T.decimal t
 
-parseAmount :: Text -> Either String HL.Amount
-parseAmount t = case runParser (HL.amountp <* eof) HL.nullctx "" (T.unpack t) of
-  Left err -> Left (show err)
-  Right res -> Right res
+post' :: HL.AccountName -> HL.MixedAmount -> HL.Posting
+post' account amount = HL.nullposting { HL.paccount = account
+                                      , HL.pamount = amount
+                                      }
 
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = p : HL.tpostings t }
