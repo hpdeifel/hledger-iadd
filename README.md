@@ -94,4 +94,4 @@ The following keyboard shortcuts are available:
 
 
 
-[stack]: (https://github.com/commercialhaskell/stack)
+[stack]: https://github.com/commercialhaskell/stack
