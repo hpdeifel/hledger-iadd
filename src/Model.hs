@@ -1,6 +1,12 @@
 {-# LANGUAGE LambdaCase, OverloadedStrings #-}
 
-module Model where
+module Model
+       ( Step(..)
+       , MaybeStep(..)
+       , nextStep
+       , context
+       , suggest
+       ) where
 
 import           Data.Function
 import           Data.List
@@ -67,11 +73,14 @@ suggest _ DateQuestion =
   Just . T.pack . formatTime defaultTimeLocale "%d.%m.%Y" <$> getCurrentTime
 suggest _ (DescriptionQuestion _) = return Nothing
 suggest journal (AccountQuestion1 trans) = return $
-  suggestAccount journal (length $ HL.tpostings trans) (T.pack $ HL.tdescription trans)
+  case HL.transactionPostingBalances trans of
+    (rsum, _, _)
+      | HL.isZeroMixedAmount rsum && numPostings trans /= 0 -> Nothing
+      | otherwise -> suggestAccount journal (numPostings trans) (T.pack $ HL.tdescription trans)
 suggest journal (AccountQuestion2 _ trans) = return $ fmap (T.pack . HL.showMixedAmount) $
   case HL.transactionPostingBalances trans of
     (rsum, _, _)
-      | HL.isZeroMixedAmount rsum -> suggestAmount journal (length $ HL.tpostings trans) (T.pack $ HL.tdescription trans)
+      | HL.isZeroMixedAmount rsum -> suggestAmount journal (numPostings trans) (T.pack $ HL.tdescription trans)
       | otherwise -> Just $ HL.divideMixedAmount rsum (-1)
 suggest _ (FinalQuestion _) = return $ Just "y"
 
@@ -127,3 +136,6 @@ safeIdx :: Int -> [a] -> Maybe a
 safeIdx _ [] = Nothing
 safeIdx 0 (l:_) = Just l
 safeIdx n (_:ls) = safeIdx (n-1) ls
+
+numPostings :: HL.Transaction -> Int
+numPostings = length . HL.tpostings
