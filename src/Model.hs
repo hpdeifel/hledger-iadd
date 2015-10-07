@@ -2,6 +2,7 @@
 
 module Model where
 
+import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
@@ -9,7 +10,7 @@ import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
 import           Text.Parsec
 
-import AmountParser
+import           AmountParser
 
 data Step = DateQuestion
           | DescriptionQuestion Day
@@ -51,7 +52,8 @@ context j entryText (DescriptionQuestion _) =
 context j entryText (AccountQuestion1 _) =
   let names = map T.pack $ HL.journalAccountNames j
   in filterIfNotEmpty entryText matches names
-context _ _ (AccountQuestion2 _ _) = []
+context _ entryText (AccountQuestion2 _ _) =
+  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount entryText
 context _ _  (FinalQuestion _) = []
 
 filterIfNotEmpty t f l
@@ -91,3 +93,6 @@ post' account amount = HL.nullposting { HL.paccount = account
 
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = p : HL.tpostings t }
+
+trySumAmount :: Text -> Maybe HL.MixedAmount
+trySumAmount = either (const Nothing) Just . parseAmount

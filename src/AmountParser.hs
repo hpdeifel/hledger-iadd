@@ -8,7 +8,7 @@ import           Text.Parsec
 type Parser = Parsec String HL.JournalContext
 
 parseAmount :: Text -> Either String HL.MixedAmount
-parseAmount t = case runParser (mixed <* eof) HL.nullctx "" (T.unpack t) of
+parseAmount t = case runParser (mixed <* optional spaces <* eof) HL.nullctx "" (T.unpack t) of
   Left err -> Left (show err)
   Right res -> Right res
 
@@ -16,7 +16,7 @@ mixed :: Parser HL.MixedAmount
 mixed = HL.mixed <$> expr
 
 expr :: Parser [HL.Amount]
-expr = many1 (lexeme factor)
+expr = many1 (try $ lexeme factor)
 
 factor :: Parser HL.Amount
 factor =  (char '+' >> lexeme HL.amountp)
