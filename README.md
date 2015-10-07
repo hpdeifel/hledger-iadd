@@ -22,6 +22,8 @@ This program has been written to support *my* use case and *my*
 journal. I have not tried to handle all possible cases, so it may very
 well break for yours. Please feel free to report such breakage as issue.
 
+Also: Don't look at the code :-P
+
 ## Installation
 ### stack
 
