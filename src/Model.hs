@@ -68,9 +68,11 @@ suggest _ DateQuestion =
 suggest _ (DescriptionQuestion _) = return Nothing
 suggest journal (AccountQuestion1 trans) = return $
   suggestAccount journal (length $ HL.tpostings trans) (T.pack $ HL.tdescription trans)
-suggest _ (AccountQuestion2 _ trans) =
-  let (rsum, _, _) = HL.transactionPostingBalances trans
-  in return $ Just $ T.pack $ HL.showMixedAmount (HL.divideMixedAmount rsum (-1))
+suggest journal (AccountQuestion2 _ trans) = return $ fmap (T.pack . HL.showMixedAmount) $
+  case HL.transactionPostingBalances trans of
+    (rsum, _, _)
+      | HL.isZeroMixedAmount rsum -> suggestAmount journal (length $ HL.tpostings trans) (T.pack $ HL.tdescription trans)
+      | otherwise -> Just $ HL.divideMixedAmount rsum (-1)
 suggest _ (FinalQuestion _) = return $ Just "y"
 
 matches :: Text -> Text -> Bool
@@ -104,6 +106,9 @@ suggestAccount :: HL.Journal -> Int -> Text -> Maybe Text
 suggestAccount journal num desc = T.pack <$>
   (nthAccountName num =<< findLastSimilar journal desc)
 
+suggestAmount :: HL.Journal -> Int -> Text -> Maybe HL.MixedAmount
+suggestAmount journal num desc = nthAmount num =<< findLastSimilar journal desc
+
 findLastSimilar :: HL.Journal -> Text -> Maybe HL.Transaction
 findLastSimilar journal desc =
   maximumBy (compare `on` HL.tdate) <$>
@@ -111,6 +116,9 @@ findLastSimilar journal desc =
 
 nthAccountName :: Int -> HL.Transaction -> Maybe HL.AccountName
 nthAccountName num = safeIdx num . map HL.paccount . HL.tpostings
+
+nthAmount :: Int -> HL.Transaction -> Maybe HL.MixedAmount
+nthAmount num = safeIdx num . map HL.pamount . HL.tpostings
 
 listToMaybe' [] = Nothing
 listToMaybe' ls = Just ls
