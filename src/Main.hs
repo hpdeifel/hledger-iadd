@@ -94,7 +94,7 @@ doNextStep useSelected as = do
                     , asMaybe (editText as)
                     , asSuggestion as
                     ]
-  s <- nextStep name (asStep as)
+  s <- nextStep (asJournal as) name (asStep as)
   case s of
     Left err -> return as { asMessage = err }
     Right (Finished trans) -> do

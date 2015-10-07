@@ -22,8 +22,8 @@ data Step = DateQuestion
 data MaybeStep = Finished HL.Transaction
                | Step Step
 
-nextStep :: Text -> Step -> IO (Either Text MaybeStep)
-nextStep entryText current = case current of
+nextStep :: HL.Journal -> Text -> Step -> IO (Either Text MaybeStep)
+nextStep journal entryText current = case current of
   DateQuestion -> parseTime entryText >>= \case
     Nothing -> return $ Left "Could not parse date. Format: %d[.%m[.%Y]]"
     Just day -> return $ Right $ Step (DescriptionQuestion day)
@@ -34,7 +34,7 @@ nextStep entryText current = case current of
     | T.null entryText -> return $ Right $ Step $ FinalQuestion trans
     | otherwise        -> return $ Right $ Step $
       AccountQuestion2 (T.unpack entryText) trans
-  AccountQuestion2 name trans -> case parseAmount entryText of
+  AccountQuestion2 name trans -> case parseAmount (HL.jContext journal) entryText of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
       let newPosting = post' name amount
@@ -52,8 +52,8 @@ context j entryText (DescriptionQuestion _) =
 context j entryText (AccountQuestion1 _) =
   let names = map T.pack $ HL.journalAccountNames j
   in filterIfNotEmpty entryText matches names
-context _ entryText (AccountQuestion2 _ _) =
-  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount entryText
+context journal entryText (AccountQuestion2 _ _) =
+  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
 context _ _  (FinalQuestion _) = []
 
 filterIfNotEmpty t f l
@@ -94,5 +94,5 @@ post' account amount = HL.nullposting { HL.paccount = account
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = p : HL.tpostings t }
 
-trySumAmount :: Text -> Maybe HL.MixedAmount
-trySumAmount = either (const Nothing) Just . parseAmount
+trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
+trySumAmount context = either (const Nothing) Just . parseAmount context

@@ -7,8 +7,8 @@ import           Text.Parsec
 
 type Parser = Parsec String HL.JournalContext
 
-parseAmount :: Text -> Either String HL.MixedAmount
-parseAmount t = case runParser (mixed <* optional spaces <* eof) HL.nullctx "" (T.unpack t) of
+parseAmount :: HL.JournalContext -> Text -> Either String HL.MixedAmount
+parseAmount context t = case runParser (mixed <* optional spaces <* eof) context "" (T.unpack t) of
   Left err -> Left (show err)
   Right res -> Right res
 
