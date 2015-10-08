@@ -37,16 +37,28 @@ To build and install all Haskell dependencies locally and install
 You may get asked to install the GHC Haskell compiler locally. To do
 that, type `stack setup`.
 
-### Other
+### Cabal
 
-If you have already installed the dependencies (See
-`hledger-add.cabal`) via your OS' package manager or `cabal install`,
-you can build and install this tool from the source directory with:
+First, install the GHC Haskell compiler and the `cabal install`,
+`alex` and `happy` build tools, possibly from your distribution or the
+[haskell platform].
 
-    runhaskell Setup.hs configure --user --bindir ~/bin
-    runhaskell Setup.hs build
-    runhaskell Setup.hs install
+Since `cabal` builds regularly break in non-isolated environments, the
+recommended next step is to create a cabal sandbox where all
+dependencies will be installed in:
 
+    cd hledger-add
+	cabal sandbox init
+
+You can now download and install all dependencies locally with
+
+    cabal install --only-dependencies
+
+And finally you're ready to build and install `hledger-add`:
+
+    cabal configure --bindir ~/bin
+	cabal build
+	cabal copy
 
 ## Usage
 
@@ -95,3 +107,4 @@ The following keyboard shortcuts are available:
 
 
 [stack]: https://github.com/commercialhaskell/stack
+[haskell platform]: https://www.haskell.org/platform/
