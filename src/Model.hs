@@ -16,7 +16,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Read as T
 import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
-import           Text.Parsec
 
 import           AmountParser
 
@@ -36,8 +35,8 @@ nextStep journal entryText current = case current of
     Nothing -> return $ Left "Could not parse date. Format: %d[.%m[.%Y]]"
     Just day -> return $ Right $ Step (DescriptionQuestion day)
   DescriptionQuestion day -> return $ Right $ Step $
-    AccountQuestion1 (HL.nulltransaction { HL.tdate = day
-                                         , HL.tdescription = (T.unpack entryText)})
+    AccountQuestion1 HL.nulltransaction { HL.tdate = day
+                                         , HL.tdescription = T.unpack entryText}
   AccountQuestion1 trans
     | T.null entryText -> return $ Right $ Step $ FinalQuestion trans
     | otherwise        -> return $ Right $ Step $
@@ -64,6 +63,7 @@ context journal entryText (AccountQuestion2 _ _) =
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
 context _ _  (FinalQuestion _) = []
 
+filterIfNotEmpty :: Text -> (Text -> Text -> Bool) -> [Text] -> [Text]
 filterIfNotEmpty t f l
   | T.null t = []
   | otherwise = filter (f t) l
@@ -109,7 +109,7 @@ addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = p : HL.tpostings t }
 
 trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
-trySumAmount context = either (const Nothing) Just . parseAmount context
+trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
 
 suggestAccount :: HL.Journal -> Int -> Text -> Maybe Text
 suggestAccount journal num desc = T.pack <$>
@@ -129,6 +129,7 @@ nthAccountName num = safeIdx num . map HL.paccount . HL.tpostings
 nthAmount :: Int -> HL.Transaction -> Maybe HL.MixedAmount
 nthAmount num = safeIdx num . map HL.pamount . HL.tpostings
 
+listToMaybe' :: [a] -> Maybe [a]
 listToMaybe' [] = Nothing
 listToMaybe' ls = Just ls
 

@@ -6,9 +6,7 @@ import           Brick
 import           Brick.Widgets.List
 import           Data.Monoid
 import           Data.Text (Text)
-import qualified Data.Text as T
 import           Data.Time hiding (parseTime)
-import qualified Data.Vector as V
 import qualified Hledger as HL
 
 import           Model
@@ -19,10 +17,8 @@ viewState (DescriptionQuestion date) = str $
   formatTime defaultTimeLocale "%Y/%m/%d" date
 viewState (AccountQuestion1 trans) = str $
   HL.showTransaction trans
-viewState (AccountQuestion2 acc trans) = str $ concat $
-  [ HL.showTransaction trans
-  , "  " ++ acc
-  ]
+viewState (AccountQuestion2 acc trans) = str $
+  HL.showTransaction trans ++ "  " ++ acc
 viewState (FinalQuestion trans) = str $
   HL.showTransaction trans
 
@@ -34,8 +30,8 @@ viewQuestion (AccountQuestion1 trans) = str $
 viewQuestion (AccountQuestion2 _ trans) = str $
   "Amount " ++ show (numPostings trans + 1)
 viewQuestion (FinalQuestion trans) = txt $ mconcat $
-  [ "Add this transaction to the journal? Y/n" ]
-  ++ if HL.isTransactionBalanced Nothing trans then [] else ["\nTransaction not balanced!!!"]
+  "Add this transaction to the journal? Y/n"
+  : if HL.isTransactionBalanced Nothing trans then [] else ["\nTransaction not balanced!!!"]
 viewContext :: List Text -> Widget
 viewContext = flip renderList renderItem
 
