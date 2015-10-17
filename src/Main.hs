@@ -59,6 +59,7 @@ event as ev = case ev of
                                            , asMessage = ""}
   EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
                                            , asMessage = ""}
+  EvKey (KChar '\t') [] -> continue (insertSelected as)
   EvKey (KChar 'c') [MCtrl] -> liftIO (reset as) >>= continue
   EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
   EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
@@ -118,6 +119,12 @@ doNextStep useSelected as = do
                 , asSuggestion = sugg
                 }
 
+insertSelected :: AppState -> AppState
+insertSelected as = case listSelectedElement (asContext as) of
+  Nothing -> as
+  Just (_, line) -> as { asEditor = setEdit line (asEditor as) }
+
+
 asMaybe :: Text -> Maybe Text
 asMaybe t
   | T.null t  = Nothing
@@ -126,7 +133,11 @@ asMaybe t
 attrs = attrMap defAttr
   [ (listSelectedAttr, black `on` white) ]
 
-clearEdit edit = edit & editContentsL .~ stringZipper [""] (Just 1)
+clearEdit = setEdit ""
+
+setEdit :: Text -> Editor -> Editor
+setEdit content edit = edit & editContentsL .~ zipper
+  where zipper = gotoEOL (stringZipper [T.unpack content] (Just 1))
 
 addToJournal :: HL.Transaction -> FilePath -> IO ()
 addToJournal trans path = appendFile path (show trans)
