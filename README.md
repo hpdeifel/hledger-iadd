@@ -99,6 +99,7 @@ The following keyboard shortcuts are available:
 | <kbd>Esc</kbd>     | Quit the program without saving the current transaction                       |
 | <kbd>Ret</kbd>     | Accept the currently selected answer                                          |
 | <kbd>Alt-Ret</kbd> | Accept the current answer verbatim from the text area, ignoring the selection |
+| <kbd>Tab</kbd>     | Insert the currently selected answer into the text area                       |
 | <kbd>C-c</kbd>     | Abort the current transaction                                                 |
 | <kbd>C-n</kbd>     | Select the next context item                                                  |
 | <kbd>C-p</kbd>     | Select the previous context item                                              |
