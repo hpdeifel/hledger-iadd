@@ -21,8 +21,8 @@ import           AmountParser
 
 data Step = DateQuestion
           | DescriptionQuestion Day
-          | AccountQuestion1 HL.Transaction
-          | AccountQuestion2 HL.AccountName HL.Transaction
+          | AccountQuestion HL.Transaction
+          | AmountQuestion HL.AccountName HL.Transaction
           | FinalQuestion HL.Transaction
 
 
@@ -35,31 +35,31 @@ nextStep journal entryText current = case current of
     Nothing -> return $ Left "Could not parse date. Format: %d[.%m[.%Y]]"
     Just day -> return $ Right $ Step (DescriptionQuestion day)
   DescriptionQuestion day -> return $ Right $ Step $
-    AccountQuestion1 HL.nulltransaction { HL.tdate = day
+    AccountQuestion HL.nulltransaction { HL.tdate = day
                                          , HL.tdescription = T.unpack entryText}
-  AccountQuestion1 trans
+  AccountQuestion trans
     | T.null entryText -> return $ Right $ Step $ FinalQuestion trans
     | otherwise        -> return $ Right $ Step $
-      AccountQuestion2 (T.unpack entryText) trans
-  AccountQuestion2 name trans -> case parseAmount (HL.jContext journal) entryText of
+      AmountQuestion (T.unpack entryText) trans
+  AmountQuestion name trans -> case parseAmount (HL.jContext journal) entryText of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
       let newPosting = post' name amount
-      in AccountQuestion1 (addPosting newPosting trans)
+      in AccountQuestion (addPosting newPosting trans)
 
   FinalQuestion trans
     | entryText == "y" -> return $ Right $ Finished trans
-    | otherwise -> return $ Right $ Step $ AccountQuestion1 trans
+    | otherwise -> return $ Right $ Step $ AccountQuestion trans
 
 context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
 context j entryText (DescriptionQuestion _) =
   let descs = map T.pack $ HL.journalDescriptions j
   in filterIfNotEmpty entryText matches descs
-context j entryText (AccountQuestion1 _) =
+context j entryText (AccountQuestion _) =
   let names = map T.pack $ HL.journalAccountNames j
   in filterIfNotEmpty entryText matches names
-context journal entryText (AccountQuestion2 _ _) =
+context journal entryText (AmountQuestion _ _) =
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
 context _ _  (FinalQuestion _) = []
 
@@ -72,12 +72,12 @@ suggest :: HL.Journal -> Step -> IO (Maybe Text)
 suggest _ DateQuestion =
   Just . T.pack . formatTime defaultTimeLocale "%d.%m.%Y" <$> getCurrentTime
 suggest _ (DescriptionQuestion _) = return Nothing
-suggest journal (AccountQuestion1 trans) = return $
+suggest journal (AccountQuestion trans) = return $
   case HL.transactionPostingBalances trans of
     (rsum, _, _)
       | HL.isZeroMixedAmount rsum && numPostings trans /= 0 -> Nothing
       | otherwise -> suggestAccount journal (numPostings trans) (T.pack $ HL.tdescription trans)
-suggest journal (AccountQuestion2 _ trans) = return $ fmap (T.pack . HL.showMixedAmount) $
+suggest journal (AmountQuestion _ trans) = return $ fmap (T.pack . HL.showMixedAmount) $
   case HL.transactionPostingBalances trans of
     (rsum, _, _)
       | HL.isZeroMixedAmount rsum -> suggestAmount journal (numPostings trans) (T.pack $ HL.tdescription trans)

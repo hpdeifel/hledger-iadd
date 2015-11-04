@@ -15,9 +15,9 @@ viewState :: Step -> Widget
 viewState DateQuestion = txt " "
 viewState (DescriptionQuestion date) = str $
   formatTime defaultTimeLocale "%Y/%m/%d" date
-viewState (AccountQuestion1 trans) = str $
+viewState (AccountQuestion trans) = str $
   HL.showTransaction trans
-viewState (AccountQuestion2 acc trans) = str $
+viewState (AmountQuestion acc trans) = str $
   HL.showTransaction trans ++ "  " ++ acc
 viewState (FinalQuestion trans) = str $
   HL.showTransaction trans
@@ -25,9 +25,9 @@ viewState (FinalQuestion trans) = str $
 viewQuestion :: Step -> Widget
 viewQuestion DateQuestion = txt "Date"
 viewQuestion (DescriptionQuestion _) = txt "Description"
-viewQuestion (AccountQuestion1 trans) = str $
+viewQuestion (AccountQuestion trans) = str $
   "Account " ++ show (numPostings trans + 1)
-viewQuestion (AccountQuestion2 _ trans) = str $
+viewQuestion (AmountQuestion _ trans) = str $
   "Amount " ++ show (numPostings trans + 1)
 viewQuestion (FinalQuestion trans) = txt $ mconcat $
   "Add this transaction to the journal? Y/n"
