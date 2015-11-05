@@ -32,6 +32,7 @@ viewQuestion (AmountQuestion _ trans) = str $
 viewQuestion (FinalQuestion trans) = txt $ mconcat $
   "Add this transaction to the journal? Y/n"
   : if HL.isTransactionBalanced Nothing trans then [] else ["\nTransaction not balanced!!!"]
+
 viewContext :: List Text -> Widget
 viewContext = flip renderList renderItem
 

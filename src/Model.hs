@@ -11,6 +11,7 @@ module Model
 import           Data.Function
 import           Data.List
 import           Data.Maybe
+import           Data.Ord (Down(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
@@ -63,25 +64,21 @@ context journal entryText (AmountQuestion _ _) =
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
 context _ _  (FinalQuestion _) = []
 
-filterIfNotEmpty :: Text -> (Text -> Text -> Bool) -> [Text] -> [Text]
-filterIfNotEmpty t f l
-  | T.null t = []
-  | otherwise = filter (f t) l
-
+-- | Suggest the initial text of the entry box for each step
+--
+-- For example, it suggests today for the date prompt
 suggest :: HL.Journal -> Step -> IO (Maybe Text)
 suggest _ DateQuestion =
   Just . T.pack . formatTime defaultTimeLocale "%d.%m.%Y" <$> getCurrentTime
 suggest _ (DescriptionQuestion _) = return Nothing
 suggest journal (AccountQuestion trans) = return $
-  case HL.transactionPostingBalances trans of
-    (rsum, _, _)
-      | HL.isZeroMixedAmount rsum && numPostings trans /= 0 -> Nothing
-      | otherwise -> suggestAccount journal (numPostings trans) (T.pack $ HL.tdescription trans)
-suggest journal (AmountQuestion _ trans) = return $ fmap (T.pack . HL.showMixedAmount) $
-  case HL.transactionPostingBalances trans of
-    (rsum, _, _)
-      | HL.isZeroMixedAmount rsum -> suggestAmount journal (numPostings trans) (T.pack $ HL.tdescription trans)
-      | otherwise -> Just $ HL.divideMixedAmount rsum (-1)
+  if numPostings trans /= 0 && transactionBalanced trans
+    then Nothing
+    else T.pack . HL.paccount <$> (suggestNextPosting trans =<< findLastSimilar journal trans)
+suggest journal (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
+  if transactionBalanced trans
+    then HL.pamount <$> (findPostingByAcc account =<< findLastSimilar journal trans)
+    else Just $ negativeAmountSum trans
 suggest _ (FinalQuestion _) = return $ Just "y"
 
 matches :: Text -> Text -> Bool
@@ -111,32 +108,50 @@ addPosting p t = t { HL.tpostings = p : HL.tpostings t }
 trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
 trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
 
-suggestAccount :: HL.Journal -> Int -> Text -> Maybe Text
-suggestAccount journal num desc = T.pack <$>
-  (nthAccountName num =<< findLastSimilar journal desc)
 
-suggestAmount :: HL.Journal -> Int -> Text -> Maybe HL.MixedAmount
-suggestAmount journal num desc = nthAmount num =<< findLastSimilar journal desc
+-- | Given a previous similar transaction, suggest the next posting to enter
+--
+-- This next posting is the one the user likely wants to type in next.
+suggestNextPosting :: HL.Transaction -> HL.Transaction -> Maybe HL.Posting
+suggestNextPosting current reference =
+  -- Postings that aren't already used in the new posting
+  let unusedPostings = filter (`notContainedIn` curPostings) refPostings
+  in listToMaybe $ sortBy cmpPosting unusedPostings
 
-findLastSimilar :: HL.Journal -> Text -> Maybe HL.Transaction
+  where [refPostings, curPostings] = map HL.tpostings [reference, current]
+        notContainedIn p = not . any (((==) `on` HL.paccount) p)
+        -- Sort descending by amount. This way, negative amounts rank last
+        cmpPosting = compare `on` (Down . HL.pamount)
+
+findLastSimilar :: HL.Journal -> HL.Transaction -> Maybe HL.Transaction
 findLastSimilar journal desc =
   maximumBy (compare `on` HL.tdate) <$>
-    listToMaybe' (filter ((==desc) . T.pack . HL.tdescription) $ HL.jtxns journal)
+    listToMaybe' (filter (((==) `on` (T.pack . HL.tdescription)) desc) $ HL.jtxns journal)
 
-nthAccountName :: Int -> HL.Transaction -> Maybe HL.AccountName
-nthAccountName num = safeIdx num . map HL.paccount . HL.tpostings
-
-nthAmount :: Int -> HL.Transaction -> Maybe HL.MixedAmount
-nthAmount num = safeIdx num . map HL.pamount . HL.tpostings
+-- | Return the first Posting that matches the given account name in the transaction
+findPostingByAcc :: HL.AccountName -> HL.Transaction -> Maybe HL.Posting
+findPostingByAcc account = find ((==account) . HL.paccount) . HL.tpostings
 
 listToMaybe' :: [a] -> Maybe [a]
 listToMaybe' [] = Nothing
 listToMaybe' ls = Just ls
 
-safeIdx :: Int -> [a] -> Maybe a
-safeIdx _ [] = Nothing
-safeIdx 0 (l:_) = Just l
-safeIdx n (_:ls) = safeIdx (n-1) ls
-
 numPostings :: HL.Transaction -> Int
 numPostings = length . HL.tpostings
+
+filterIfNotEmpty :: Text -> (Text -> Text -> Bool) -> [Text] -> [Text]
+filterIfNotEmpty t f l
+  | T.null t = []
+  | otherwise = filter (f t) l
+
+-- | Returns True if all postings balance and the transaction is not empty
+transactionBalanced :: HL.Transaction -> Bool
+transactionBalanced trans =
+  let (rsum, _, _) = HL.transactionPostingBalances trans
+  in HL.isZeroMixedAmount rsum
+
+-- | Computes the sum of all postings in the transaction and inverts it
+negativeAmountSum :: HL.Transaction -> HL.MixedAmount
+negativeAmountSum trans =
+  let (rsum, _, _) = HL.transactionPostingBalances trans
+  in HL.divideMixedAmount rsum (-1)
