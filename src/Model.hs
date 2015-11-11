@@ -56,10 +56,10 @@ context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
 context j entryText (DescriptionQuestion _) =
   let descs = map T.pack $ HL.journalDescriptions j
-  in filterIfNotEmpty entryText matches descs
+  in filter (entryText `matches`) descs
 context j entryText (AccountQuestion _) =
   let names = map T.pack $ HL.journalAccountNames j
-  in filterIfNotEmpty entryText matches names
+  in filter (entryText `matches`) names
 context journal entryText (AmountQuestion _ _) =
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
 context _ _  (FinalQuestion _) = []
@@ -81,8 +81,15 @@ suggest journal (AmountQuestion account trans) = return $ fmap (T.pack . HL.show
     else Just $ negativeAmountSum trans
 suggest _ (FinalQuestion _) = return $ Just "y"
 
+-- | Returns true if the pattern is not empty and all of its words occur in the string
+--
+-- If the pattern is empty, we don't want any entries in the list, so nothing is
+-- selected if the users enters an empty string. Empty inputs are special cased,
+-- so this is important.
 matches :: Text -> Text -> Bool
-matches a b = matches' (T.toCaseFold a) (T.toCaseFold b)
+matches a b
+  | T.null a = False
+  | otherwise = matches' (T.toCaseFold a) (T.toCaseFold b)
   where matches' a' b' = all (`T.isInfixOf` b') (T.words a')
 
 parseTime :: Text -> IO (Maybe Day)
@@ -138,11 +145,6 @@ listToMaybe' ls = Just ls
 
 numPostings :: HL.Transaction -> Int
 numPostings = length . HL.tpostings
-
-filterIfNotEmpty :: Text -> (Text -> Text -> Bool) -> [Text] -> [Text]
-filterIfNotEmpty t f l
-  | T.null t = []
-  | otherwise = filter (f t) l
 
 -- | Returns True if all postings balance and the transaction is not empty
 transactionBalanced :: HL.Transaction -> Bool
