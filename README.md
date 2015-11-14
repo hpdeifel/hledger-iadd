@@ -1,6 +1,6 @@
-# hledger-add
+# hledger-iadd
 
-A terminal UI as drop-in replacement for `hledger add`.
+An interactive terminal UI as drop-in replacement for `hledger add`.
 
 ## Features
 
@@ -30,12 +30,12 @@ Also: Don't look at the code :-P
 ### stack
 
 The easiest method would be [stack]: Install the [stack] program, `cd`
-to `hledger-add`s source directory and type:
+to `hledger-iadd`s source directory and type:
 
     stack install
 
 To build and install all Haskell dependencies locally and install
-`hledger-add` to `~/.local/bin`. See `stack --help` for more options.
+`hledger-iadd` to `~/.local/bin`. See `stack --help` for more options.
 You may get asked to install the GHC Haskell compiler locally. To do
 that, type `stack setup`.
 
@@ -49,14 +49,14 @@ Since `cabal` builds regularly break in non-isolated environments, the
 recommended next step is to create a cabal sandbox where all
 dependencies will be installed in:
 
-    cd hledger-add
+    cd hledger-iadd
 	cabal sandbox init
 
 You can now download and install all dependencies locally with
 
     cabal install --only-dependencies
 
-And finally you're ready to build and install `hledger-add`:
+And finally you're ready to build and install `hledger-iadd`:
 
     cabal configure --bindir ~/bin
 	cabal build
@@ -64,7 +64,13 @@ And finally you're ready to build and install `hledger-add`:
 
 ## Usage
 
-`hledger-add` currently assumes that your journal is called
+You can start the program either with
+
+    hledger iadd
+
+or simply `hledger-iadd`.
+
+`hledger-iadd` currently assumes that your journal is called
 `~/.hledger.journal`. If you prefer something else, please make a
 symlink or edit the source.
 

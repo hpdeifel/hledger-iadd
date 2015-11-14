@@ -1,4 +1,4 @@
-name:                hledger-add
+name:                hledger-iadd
 version:             0.1.0.0
 synopsis:            Simple project template from stack
 description:         Please see README.md
@@ -12,7 +12,7 @@ category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
 
-executable hledger-add
+executable hledger-iadd
   hs-source-dirs:      src
   main-is:             Main.hs
   other-modules:       Model
