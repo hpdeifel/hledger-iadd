@@ -12,6 +12,8 @@ This project improves in the following ways on hledger's `add` command:
  - Integrated calculator: Amounts can be written as simple sums with
    real-time feedback on the result.
 
+ - All actions while entering a transaction can be undone
+
  - Dates are expected in German format `%d.%m.%Y` or abbreviated as
    `%d.%m` or simply `%d`. I intend to support other formats, but
    that's what I use and it's currently the only one implemented.
@@ -99,6 +101,7 @@ The following keyboard shortcuts are available:
 | <kbd>Esc</kbd>     | Quit the program without saving the current transaction                       |
 | <kbd>Ret</kbd>     | Accept the currently selected answer                                          |
 | <kbd>Alt-Ret</kbd> | Accept the current answer verbatim from the text area, ignoring the selection |
+| <kbd>C-z</kbd>     | Undo the last action                                                          |
 | <kbd>Tab</kbd>     | Insert the currently selected answer into the text area                       |
 | <kbd>C-c</kbd>     | Abort the current transaction                                                 |
 | <kbd>C-n</kbd>     | Select the next context item                                                  |

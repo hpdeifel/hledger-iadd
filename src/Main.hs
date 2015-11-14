@@ -61,6 +61,7 @@ event as ev = case ev of
                                            , asMessage = ""}
   EvKey (KChar '\t') [] -> continue (insertSelected as)
   EvKey (KChar 'c') [MCtrl] -> liftIO (reset as) >>= continue
+  EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
   EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
   EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
   _ -> setContext <$>
@@ -117,7 +118,18 @@ doNextStep useSelected as = do
                 , asEditor = clearEdit (asEditor as)
                 , asContext = ctx'
                 , asSuggestion = sugg
+                , asMessage = ""
                 }
+
+doUndo :: AppState -> IO AppState
+doUndo as = case undo (asStep as) of
+  Left msg -> return as { asMessage = "Undo failed: " <> msg }
+  Right step -> do
+    sugg <- suggest (asJournal as) step
+    return $ setContext $ as { asStep = step
+                             , asEditor = clearEdit (asEditor as)
+                             , asSuggestion = sugg
+                             }
 
 insertSelected :: AppState -> AppState
 insertSelected as = case listSelectedElement (asContext as) of

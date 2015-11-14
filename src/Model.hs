@@ -4,6 +4,7 @@ module Model
        ( Step(..)
        , MaybeStep(..)
        , nextStep
+       , undo
        , context
        , suggest
        ) where
@@ -39,7 +40,7 @@ nextStep journal entryText current = case current of
     Just day -> return $ Right $ Step (DescriptionQuestion day)
   DescriptionQuestion day -> return $ Right $ Step $
     AccountQuestion HL.nulltransaction { HL.tdate = day
-                                         , HL.tdescription = T.unpack entryText}
+                                       , HL.tdescription = T.unpack entryText}
   AccountQuestion trans
     | T.null entryText -> return $ Right $ Step $ FinalQuestion trans
     | otherwise        -> return $ Right $ Step $
@@ -53,6 +54,20 @@ nextStep journal entryText current = case current of
   FinalQuestion trans
     | entryText == "y" -> return $ Right $ Finished trans
     | otherwise -> return $ Right $ Step $ AccountQuestion trans
+
+
+-- | Reverses the last step.
+--
+-- Returns (Left errorMessage), if the step can't be reversed
+undo :: Step -> Either Text Step
+undo current = case current of
+  DateQuestion -> Left "Already at oldest step in current transaction"
+  DescriptionQuestion _ -> return DateQuestion
+  AccountQuestion trans -> return $ case HL.tpostings trans of
+    []     -> DescriptionQuestion (HL.tdate trans)
+    (p:ps) -> AmountQuestion (HL.paccount p) trans { HL.tpostings = ps }
+  AmountQuestion _ trans -> Right $ AccountQuestion trans
+  FinalQuestion trans -> undo (AccountQuestion trans)
 
 context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
