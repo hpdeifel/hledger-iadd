@@ -1,16 +1,20 @@
 name:                hledger-iadd
 version:             0.1.0.0
-synopsis:            Simple project template from stack
+synopsis:            A terminal UI as drop-in replacement for hledger add
 description:         Please see README.md
-homepage:            http://github.com/rootzlevel/hledger-add#readme
+homepage:            http://github.com/rootzlevel/hledger-iadd#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Hans-Peter Deifel
 maintainer:          hpd@hpdeifel.de
-copyright:           2010 Author Here
-category:            Web
+copyright:           2015 Hans-Peter Deifel
+category:            Finance, Console
 build-type:          Simple
 cabal-version:       >=1.10
+                     
+source-repository head
+  type: git
+  location: https://github.com/rootzlevel/hledger-iadd.git
 
 executable hledger-iadd
   hs-source-dirs:      src
@@ -21,17 +25,17 @@ executable hledger-iadd
                      , Brick.Widgets.List.Utils
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
-                     , hledger-lib
-                     , brick
-                     , vty
+                     , hledger-lib <0.27
+                     , brick >= 0.2.3
+                     , vty >= 5.4
                      , data-default
                      , text
                      , lens
                      , text-zipper
-                     , transformers
-                     , time
+                     , transformers >= 0.3
+                     , time >= 1.5
                      , vector
                      , parsec
-                     , containers >= 0.5 && < 0.6
+                     , containers >= 0.5
 
   ghc-options:         -threaded
