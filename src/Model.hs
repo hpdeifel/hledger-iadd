@@ -10,7 +10,9 @@ module Model
 
 import           Data.Function
 import           Data.List
+import qualified Data.Map as M
 import           Data.Maybe
+import           Data.Monoid
 import           Data.Ord (Down(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -56,10 +58,10 @@ context :: HL.Journal -> Text -> Step -> [Text]
 context _ _ DateQuestion = []
 context j entryText (DescriptionQuestion _) =
   let descs = map T.pack $ HL.journalDescriptions j
-  in filter (entryText `matches`) descs
+  in sortBy (descUses j) $ filter (entryText `matches`) descs
 context j entryText (AccountQuestion _) =
   let names = map T.pack $ HL.journalAccountNames j
-  in filter (entryText `matches`) names
+  in  filter (entryText `matches`) names
 context journal entryText (AmountQuestion _ _) =
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
 context _ _  (FinalQuestion _) = []
@@ -157,3 +159,13 @@ negativeAmountSum :: HL.Transaction -> HL.MixedAmount
 negativeAmountSum trans =
   let (rsum, _, _) = HL.transactionPostingBalances trans
   in HL.divideMixedAmount rsum (-1)
+
+-- | Compare two transaction descriptions based on their number of occurences in
+-- the given journal.
+descUses :: HL.Journal -> Text -> Text -> Ordering
+descUses journal = compare `on` (Down . flip M.lookup usesMap)
+  where usesMap = foldr (count . T.pack . HL.tdescription) M.empty $
+                  HL.jtxns journal
+        -- Add one to the current count of this element
+        count :: Text -> M.Map Text (Sum Int) -> M.Map Text (Sum Int)
+        count = M.alter (<> Just 1)

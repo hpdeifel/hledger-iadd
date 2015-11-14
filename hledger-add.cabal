@@ -32,5 +32,6 @@ executable hledger-add
                      , time
                      , vector
                      , parsec
+                     , containers >= 0.5 && < 0.6
 
   ghc-options:         -threaded
