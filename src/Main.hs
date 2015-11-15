@@ -54,13 +54,13 @@ draw as = [ui]
 
 event :: AppState -> Event -> EventM (Next AppState)
 event as ev = case ev of
-  EvKey KEsc [] -> halt as
+  EvKey (KChar 'c') [MCtrl] -> halt as
   EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
                                            , asMessage = ""}
   EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
                                            , asMessage = ""}
   EvKey (KChar '\t') [] -> continue (insertSelected as)
-  EvKey (KChar 'c') [MCtrl] -> liftIO (reset as) >>= continue
+  EvKey KEsc [] -> liftIO (reset as) >>= continue
   EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
   EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
   EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
