@@ -1,8 +1,9 @@
 flags: {}
+extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.2.1
+- brick-0.2.3
 - text-zipper-0.3.1
 - vty-5.4.0
-resolver: lts-3.7
+resolver: lts-3.12
