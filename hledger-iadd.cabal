@@ -28,7 +28,6 @@ executable hledger-iadd
                      , hledger-lib <0.27
                      , brick >= 0.2.3
                      , vty >= 5.4
-                     , data-default
                      , text
                      , lens
                      , text-zipper
