@@ -13,13 +13,11 @@ import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
-import           Data.Default
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Zipper
-import           Data.Time hiding (parseTime)
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
@@ -85,11 +83,14 @@ reset as = do
     , asMessage = "Transaction aborted"
     }
 
+setContext :: AppState -> AppState
 setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromList $
   context (asJournal as) (editText as) (asStep as) }
 
+editText :: AppState -> Text
 editText = T.pack . concat . getEditContents . asEditor
 
+doNextStep :: Bool -> AppState -> IO AppState
 doNextStep useSelected as = do
   let name = fromMaybe (editText as) $
                msum [ if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
@@ -142,9 +143,11 @@ asMaybe t
   | T.null t  = Nothing
   | otherwise = Just t
 
+attrs :: AttrMap
 attrs = attrMap defAttr
   [ (listSelectedAttr, black `on` white) ]
 
+clearEdit :: Editor -> Editor
 clearEdit = setEdit ""
 
 setEdit :: Text -> Editor -> Editor
@@ -154,6 +157,7 @@ setEdit content edit = edit & editContentsL .~ zipper
 addToJournal :: HL.Transaction -> FilePath -> IO ()
 addToJournal trans path = appendFile path (show trans)
 
+ledgerPath :: FilePath -> FilePath
 ledgerPath home = home <> "/.hledger.journal"
 
 main :: IO ()
@@ -179,6 +183,8 @@ main = do
                   , appStartEvent = return
                   } :: App AppState Event
 
+expand :: Widget -> Widget
 expand = padBottom Max
 
+ctxList :: V.Vector e -> List e
 ctxList v = (if V.null v then id else listMoveTo 0) $ list "Context" v 1
