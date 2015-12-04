@@ -25,7 +25,7 @@ executable hledger-iadd
                      , Brick.Widgets.List.Utils
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
-                     , hledger-lib <0.27
+                     , hledger-lib >= 0.27 && < 0.28
                      , brick >= 0.2.3
                      , vty >= 5.4
                      , text

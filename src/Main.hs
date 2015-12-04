@@ -165,7 +165,7 @@ main = do
   home <- getEnv "HOME" -- FIXME
   let path = ledgerPath home
   journalContents <- readFile path
-  Right journal <- runExceptT $ HL.parseJournalWith HL.journal True path journalContents
+  Right journal <- runExceptT $ HL.parseAndFinaliseJournal HL.journalp True path journalContents
 
   let edit = editor "Edit" (str . concat) (Just 1) ""
 
