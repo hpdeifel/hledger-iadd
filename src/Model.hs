@@ -17,11 +17,11 @@ import           Data.Monoid
 import           Data.Ord (Down(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Read as T
 import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
 
 import           AmountParser
+import           DateParser
 
 data Step = DateQuestion
           | DescriptionQuestion Day
@@ -35,9 +35,8 @@ data MaybeStep = Finished HL.Transaction
 
 nextStep :: HL.Journal -> Text -> Step -> IO (Either Text MaybeStep)
 nextStep journal entryText current = case current of
-  DateQuestion -> parseTime entryText >>= \case
-    Nothing -> return $ Left "Could not parse date. Format: %d[.%m[.%Y]]"
-    Just day -> return $ Right $ Step (DescriptionQuestion day)
+  DateQuestion ->
+    fmap (Step . DescriptionQuestion) <$> parseDateOrHLDate german entryText
   DescriptionQuestion day -> return $ Right $ Step $
     AccountQuestion HL.nulltransaction { HL.tdate = day
                                        , HL.tdescription = T.unpack entryText}
@@ -108,18 +107,6 @@ matches a b
   | T.null a = False
   | otherwise = matches' (T.toCaseFold a) (T.toCaseFold b)
   where matches' a' b' = all (`T.isInfixOf` b') (T.words a')
-
-parseTime :: Text -> IO (Maybe Day)
-parseTime t = do
-  (currentYear, currentMonth, _) <- toGregorian . utctDay <$> getCurrentTime
-  case filter (not . T.null) $ T.splitOn "." t of
-    [d] -> return $ fromGregorian currentYear currentMonth <$> parseInt d
-    [d,m] -> return $ fromGregorian currentYear <$> parseInt m <*> parseInt d
-    [d,m,y] -> return $ fromGregorian <$> parseInt y <*> parseInt m <*> parseInt d
-    _ -> return Nothing
-
-parseInt :: (Read a, Integral a) => Text -> Maybe a
-parseInt t = either (const Nothing) (Just . fst) $ T.decimal t
 
 post' :: HL.AccountName -> HL.MixedAmount -> HL.Posting
 post' account amount = HL.nullposting { HL.paccount = account
