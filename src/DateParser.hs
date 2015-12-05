@@ -27,7 +27,7 @@ data DateSpec = DateYear
               | DateDay
               | DateString Text
               | DateOptional [DateSpec]
-                deriving (Show)
+                deriving (Show, Eq)
 
 
 -- | Try to parse date according to given DateSpec and then using hledgers
