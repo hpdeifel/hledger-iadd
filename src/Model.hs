@@ -68,17 +68,19 @@ undo current = case current of
   AmountQuestion _ trans -> Right $ AccountQuestion trans
   FinalQuestion trans -> undo (AccountQuestion trans)
 
-context :: HL.Journal -> Text -> Step -> [Text]
-context _ _ DateQuestion = []
-context j entryText (DescriptionQuestion _) =
+context :: HL.Journal -> Text -> Step -> IO [Text]
+context _ entryText DateQuestion = parseDateOrHLDate german entryText >>= \case
+  Left _ -> return []
+  Right date -> return [T.pack $ HL.showDate date]
+context j entryText (DescriptionQuestion _) = return $
   let descs = map T.pack $ HL.journalDescriptions j
   in sortBy (descUses j) $ filter (entryText `matches`) descs
-context j entryText (AccountQuestion _) =
+context j entryText (AccountQuestion _) = return $
   let names = map T.pack $ HL.journalAccountNames j
   in  filter (entryText `matches`) names
-context journal entryText (AmountQuestion _ _) =
+context journal entryText (AmountQuestion _ _) = return $
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
-context _ _  (FinalQuestion _) = []
+context _ _  (FinalQuestion _) = return []
 
 -- | Suggest the initial text of the entry box for each step
 --

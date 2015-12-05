@@ -62,15 +62,14 @@ event as ev = case ev of
   EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
   EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
   EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
-  _ -> setContext <$>
-       (AppState <$> handleEvent ev (asEditor as)
+  _ -> (AppState <$> handleEvent ev (asEditor as)
                  <*> return (asStep as)
                  <*> return (asJournal as)
                  <*> return (asContext as)
                  <*> return (asSuggestion as)
                  <*> return ""
                  <*> return (asFilename as))
-       >>= continue
+       >>= liftIO . setContext >>= continue
 
 reset :: AppState -> IO AppState
 reset as = do
@@ -83,9 +82,11 @@ reset as = do
     , asMessage = "Transaction aborted"
     }
 
-setContext :: AppState -> AppState
-setContext as = as { asContext = flip listSimpleReplace (asContext as) $ V.fromList $
-  context (asJournal as) (editText as) (asStep as) }
+setContext :: AppState -> IO AppState
+setContext as = do
+  ctx <- flip listSimpleReplace (asContext as) . V.fromList <$>
+         context (asJournal as) (editText as) (asStep as)
+  return as { asContext = ctx }
 
 editText :: AppState -> Text
 editText = T.pack . concat . getEditContents . asEditor
@@ -114,7 +115,7 @@ doNextStep useSelected as = do
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) s'
-      let ctx' = ctxList $ V.fromList $ context (asJournal as) "" s'
+      ctx' <- ctxList . V.fromList <$> context (asJournal as) "" s'
       return as { asStep = s'
                 , asEditor = clearEdit (asEditor as)
                 , asContext = ctx'
@@ -127,10 +128,10 @@ doUndo as = case undo (asStep as) of
   Left msg -> return as { asMessage = "Undo failed: " <> msg }
   Right step -> do
     sugg <- suggest (asJournal as) step
-    return $ setContext $ as { asStep = step
-                             , asEditor = clearEdit (asEditor as)
-                             , asSuggestion = sugg
-                             }
+    setContext $ as { asStep = step
+                    , asEditor = clearEdit (asEditor as)
+                    , asSuggestion = sugg
+                    }
 
 insertSelected :: AppState -> AppState
 insertSelected as = case listSelectedElement (asContext as) of
