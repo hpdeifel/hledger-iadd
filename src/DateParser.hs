@@ -9,6 +9,9 @@ module DateParser
        , parseDate
        , parseDateWithToday
        , parseDateOrHLDate
+
+       -- * Utilities
+       , weekDay
        ) where
 
 import           Control.Applicative
@@ -17,9 +20,10 @@ import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time hiding (parseTime)
+import           Data.Time.Calendar.WeekDate
+import qualified Hledger.Data.Dates as HL
 import           Text.Parsec hiding ((<|>), many)
 import           Text.Parsec.Text
-import qualified Hledger.Data.Dates as HL
 
 newtype DateFormat = DateFormat [DateSpec]
                    deriving (Eq, Show)
@@ -91,7 +95,10 @@ parseDateWithToday spec text = do
 
 parseDate :: Day -> DateFormat -> Text -> Either Text Day
 parseDate current (DateFormat spec) text =
-  case completeDate current . fmap getFirst <$> parse (parseDate' spec <* eof) "date" text of
+  let en = Just <$> parseEnglish current
+      num = completeDate current . fmap getFirst <$> parseDate' spec <* eof
+
+  in case parse ((try en <|> num) <* eof) "date" text of
     Left err -> Left $ T.pack $ show err
     Right Nothing -> Left "Invalid Date"
     Right (Just d) -> Right d
@@ -130,3 +137,35 @@ parseDate1 ds = case ds of
         completeYear year
           | year < 100 = year + 2000
           | otherwise  = year
+
+
+-- Parses an english word such as 'yesterday' or 'monday'
+parseEnglish :: Day -> Parser Day
+parseEnglish current = ($ current) <$> choice (relativeDays ++ weekDays)
+
+relativeDays :: [Parser (Day -> Day)]
+relativeDays = map try
+  [ addDays 1    <$ string "tomorrow"
+  , id           <$ string "today"
+  , addDays (-1) <$ string "yesterday"
+  ]
+
+weekDays :: [Parser (Day -> Day)]
+weekDays = zipWith (\i name -> weekDay i <$ try (string name)) [1..]
+  [ "monday"
+  , "tuesday"
+  , "wednesday"
+  , "thursday"
+  , "friday"
+  , "saturday"
+  , "sunday"
+  ]
+
+-- | Computes a relative date by the given weekday
+--
+-- Returns the first weekday with index wday, that's before the current date.
+weekDay :: Int -> Day -> Day
+weekDay wday current =
+  let (_, _, wday') = toWeekDate current
+      difference = negate $ (wday' - wday) `mod` 7
+  in addDays (toInteger difference) current

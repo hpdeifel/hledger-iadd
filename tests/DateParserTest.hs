@@ -3,11 +3,14 @@
 module DateParserTest (tests) where
 
 import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck
 import           Test.Tasty
 
 import           Data.Either
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Time
+import           Data.Time.Calendar.WeekDate
 
 import           DateParser
 
@@ -26,6 +29,10 @@ dateTests :: TestTree
 dateTests = testGroup "Date Parser"
   [ testCase "non optional fields are actually requierd" $
       shouldFail "%d-%m-%y" "05"
+  , testProperty "Week day actually returns the right week day" $
+      weekDayProp
+  , testProperty "Week day smaller than current date" $
+      weekDaySmallerProp
   ]
 
 withDateFormat :: Text -> (DateFormat -> Assertion) -> Assertion
@@ -39,3 +46,22 @@ shouldFail format date = withDateFormat format $ \format' -> do
   assertBool ("Should fail but parses: " ++ (T.unpack format)
               ++ " / " ++ (T.unpack date) ++ " as " ++ show res)
     (isLeft res)
+
+weekDayProp :: Property
+weekDayProp =
+  forAll (ModifiedJulianDay <$> (arbitrary `suchThat` (>= 7))) $ \current ->
+  forAll (choose (1, 7)) $ \wday ->
+    wday === getWDay (weekDay wday current)
+
+  where getWDay :: Day -> Int
+        getWDay d = let (_, _, w) = toWeekDate d in w
+
+weekDaySmallerProp :: Property
+weekDaySmallerProp =
+  forAll (ModifiedJulianDay <$> (arbitrary `suchThat` (>= 7))) $ \current ->
+  forAll (choose (1, 7)) $ \wday ->
+    current >= weekDay wday current
+
+
+instance Arbitrary Day where
+  arbitrary = ModifiedJulianDay <$> arbitrary

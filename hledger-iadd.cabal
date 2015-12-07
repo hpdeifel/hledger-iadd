@@ -64,4 +64,5 @@ test-suite hledger-iadd-tests
                     , containers >= 0.5
                     , tasty
                     , tasty-hunit
+                    , tasty-quickcheck
   ghc-options:        -threaded
