@@ -83,6 +83,7 @@ escape =  char '\\' *> pure (DateString "\\")
       <|> char '[' *> pure (DateString "[")
       <|> char ']' *> pure (DateString "]")
 
+-- | Parse text with given format and fill in missing fields with todays date.
 parseDateWithToday :: DateFormat -> Text -> IO (Either Text Day)
 parseDateWithToday spec text = do
   today <- utctDay <$> getCurrentTime
@@ -129,12 +130,3 @@ parseDate1 ds = case ds of
         completeYear year
           | year < 100 = year + 2000
           | otherwise  = year
-
--- parseTime :: Text -> IO (Maybe Day)
--- parseTime t = do
---   (currentYear, currentMonth, _) <- toGregorian . utctDay <$> getCurrentTime
---   case filter (not . T.null) $ T.splitOn "." t of
---     [d] -> return $ fromGregorian currentYear currentMonth <$> parseInt d
---     [d,m] -> return $ fromGregorian currentYear <$> parseInt m <*> parseInt d
---     [d,m,y] -> return $ fromGregorian <$> parseInt y <*> parseInt m <*> parseInt d
---     _ -> return Nothing
