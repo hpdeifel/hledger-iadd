@@ -23,8 +23,10 @@ import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
 import           Options.Applicative hiding (str)
 import           System.Directory
-import           System.Environment
+import           System.Exit
+import           System.IO
 
+import           DateParser
 import           Model
 import           View
 
@@ -36,6 +38,7 @@ data AppState = AppState
   , asSuggestion :: Maybe Text
   , asMessage :: Text
   , asFilename :: FilePath
+  , asDateFormat :: DateFormat
   }
 
 
@@ -71,6 +74,7 @@ event as ev = case ev of
                  <*> return (asSuggestion as)
                  <*> return ""
                  <*> return (asFilename as))
+                 <*> return (asDateFormat as)
        >>= liftIO . setContext >>= continue
 
 reset :: AppState -> IO AppState
@@ -87,7 +91,7 @@ reset as = do
 setContext :: AppState -> IO AppState
 setContext as = do
   ctx <- flip listSimpleReplace (asContext as) . V.fromList <$>
-         context (asJournal as) (editText as) (asStep as)
+         context (asJournal as) (asDateFormat as) (editText as) (asStep as)
   return as { asContext = ctx }
 
 editText :: AppState -> Text
@@ -114,10 +118,11 @@ doNextStep useSelected as = do
         , asSuggestion = sugg
         , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
+        , asDateFormat = asDateFormat as
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) s'
-      ctx' <- ctxList . V.fromList <$> context (asJournal as) "" s'
+      ctx' <- ctxList . V.fromList <$> context (asJournal as) (asDateFormat as) "" s'
       return as { asStep = s'
                 , asEditor = clearEdit (asEditor as)
                 , asContext = ctx'
@@ -164,7 +169,10 @@ addToJournal trans path = appendFile path (show trans)
 ledgerPath :: FilePath -> FilePath
 ledgerPath home = home <> "/.hledger.journal"
 
-data Options = Options { optLedgerFile :: FilePath }
+data Options = Options
+  { optLedgerFile :: FilePath
+  , optDateFormat :: String
+  }
 
 optionParser :: FilePath -> Parser Options
 optionParser home = Options
@@ -175,6 +183,12 @@ optionParser home = Options
         <> value (ledgerPath home)
         <> help "Path to the journal file"
         )
+  <*> strOption
+        (  long "date-format"
+        <> metavar "FORMAT"
+        <> value "%d[.[%m[.[%y]]]]"
+        <> help "Format used to parse dates"
+        )
 
 main :: IO ()
 main = do
@@ -182,6 +196,13 @@ main = do
 
   opts <- execParser $ info (helper <*> optionParser home) $
              fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+
+  date <- case parseDateFormat (T.pack $ optDateFormat opts) of
+    Left err -> do
+      hPutStrLn stderr "Could not parse date format"
+      hPutStr stderr (show err)
+      exitWith (ExitFailure 1)
+    Right res -> return res
 
   let path = optLedgerFile opts
   journalContents <- readFile path
@@ -191,7 +212,7 @@ main = do
 
   sugg <- suggest journal DateQuestion
 
-  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome" path
+  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome" path date
 
   void $ defaultMain app as
 
