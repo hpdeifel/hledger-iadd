@@ -22,6 +22,7 @@ import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
 import           Options.Applicative hiding (str)
+import           System.Directory
 import           System.Environment
 
 import           Model
@@ -177,7 +178,7 @@ optionParser home = Options
 
 main :: IO ()
 main = do
-  home <- getEnv "HOME" -- FIXME
+  home <- getHomeDirectory
 
   opts <- execParser $ info (helper <*> optionParser home) $
              fullDesc <> header "A terminal UI as drop-in replacement for hledger add."

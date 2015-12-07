@@ -38,6 +38,7 @@ executable hledger-iadd
                      , parsec
                      , containers >= 0.5
                      , optparse-applicative
+                     , directory
 
   ghc-options:         -threaded
 
