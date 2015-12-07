@@ -37,6 +37,7 @@ executable hledger-iadd
                      , vector
                      , parsec
                      , containers >= 0.5
+                     , optparse-applicative
 
   ghc-options:         -threaded
 

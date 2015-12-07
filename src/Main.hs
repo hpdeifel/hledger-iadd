@@ -21,6 +21,7 @@ import           Data.Text.Zipper
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
+import           Options.Applicative hiding (str)
 import           System.Environment
 
 import           Model
@@ -158,13 +159,30 @@ setEdit content edit = edit & editContentsL .~ zipper
 addToJournal :: HL.Transaction -> FilePath -> IO ()
 addToJournal trans path = appendFile path (show trans)
 
+
 ledgerPath :: FilePath -> FilePath
 ledgerPath home = home <> "/.hledger.journal"
+
+data Options = Options { optLedgerFile :: FilePath }
+
+optionParser :: FilePath -> Parser Options
+optionParser home = Options
+  <$> strOption
+        (  long "file"
+        <> short 'f'
+        <> metavar "FILE"
+        <> value (ledgerPath home)
+        <> help "Path to the journal file"
+        )
 
 main :: IO ()
 main = do
   home <- getEnv "HOME" -- FIXME
-  let path = ledgerPath home
+
+  opts <- execParser $ info (helper <*> optionParser home) $
+             fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+
+  let path = optLedgerFile opts
   journalContents <- readFile path
   Right journal <- runExceptT $ HL.parseAndFinaliseJournal HL.journalp True path journalContents
 
