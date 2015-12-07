@@ -69,7 +69,7 @@ undo current = case current of
   FinalQuestion trans -> undo (AccountQuestion trans)
 
 context :: HL.Journal -> DateFormat -> Text -> Step -> IO [Text]
-context _ dateFormat entryText DateQuestion = parseDateOrHLDate dateFormat entryText >>= \case
+context _ dateFormat entryText DateQuestion = parseDateWithToday dateFormat entryText >>= \case
   Left _ -> return []
   Right date -> return [T.pack $ HL.showDate date]
 context j _ entryText (DescriptionQuestion _) = return $
