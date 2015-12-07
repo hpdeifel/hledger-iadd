@@ -13,5 +13,5 @@ tests = testGroup "date parser" [ dateFormatTests ]
 dateFormatTests :: TestTree
 dateFormatTests = testGroup "Date Spec"
   [ testCase "german" $
-       parseDateSpec "%d[.[%m[.[%y]]]]" @?= Right german
+       parseDateFormat "%d[.[%m[.[%y]]]]" @?= Right german
   ]

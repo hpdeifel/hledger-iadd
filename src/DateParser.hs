@@ -2,8 +2,8 @@
 {-# LANGUAGE DeriveFunctor, LambdaCase #-}
 
 module DateParser
-       ( DateSpec
-       , parseDateSpec
+       ( DateFormat
+       , parseDateFormat
        , german
 
        , parseDate
@@ -21,6 +21,11 @@ import           Text.Parsec hiding ((<|>), many)
 import           Text.Parsec.Text
 import qualified Hledger.Data.Dates as HL
 
+newtype DateFormat = DateFormat [DateSpec]
+                   deriving (Eq, Show)
+
+-- TODO Add show instance that corresponds to parsed expression
+
 data DateSpec = DateYear
               | DateYearShort
               | DateMonth
@@ -32,7 +37,7 @@ data DateSpec = DateYear
 
 -- | Try to parse date according to given DateSpec and then using hledgers
 -- internal parsing, if the first fails.
-parseDateOrHLDate :: [DateSpec] -> Text -> IO (Either Text Day)
+parseDateOrHLDate :: DateFormat -> Text -> IO (Either Text Day)
 parseDateOrHLDate spec text =
   parseDateWithToday spec text >>= \case
     Right res -> return $ Right res
@@ -44,21 +49,21 @@ parseDateOrHLDate spec text =
 
 
 -- | Corresponds to %d[.[%m[.[%y]]]]
-german :: [DateSpec]
-german =
+german :: DateFormat
+german = DateFormat
   [ DateDay
   , DateOptional [DateString "."
                  ,DateOptional [DateMonth
                                ,DateOptional [DateString "."
                                              ,DateOptional [DateYearShort]]]]]
 
-parseDateSpec :: Text -> Either Text [DateSpec]
-parseDateSpec text = case parse dateSpec "input" text of
+parseDateFormat :: Text -> Either Text DateFormat
+parseDateFormat text = case parse dateSpec "input" text of
   Left err  -> Left $ T.pack $ show err
   Right res -> Right res
 
-dateSpec :: Parser [DateSpec]
-dateSpec = many oneTok <* eof
+dateSpec :: Parser DateFormat
+dateSpec = DateFormat <$> (many oneTok <* eof)
 
 oneTok :: Parser DateSpec
 oneTok =  char '%' *> percent
@@ -78,13 +83,13 @@ escape =  char '\\' *> pure (DateString "\\")
       <|> char '[' *> pure (DateString "[")
       <|> char ']' *> pure (DateString "]")
 
-parseDateWithToday :: [DateSpec] -> Text -> IO (Either Text Day)
+parseDateWithToday :: DateFormat -> Text -> IO (Either Text Day)
 parseDateWithToday spec text = do
   today <- utctDay <$> getCurrentTime
   return (parseDate today spec text)
 
-parseDate :: Day -> [DateSpec] -> Text -> Either Text Day
-parseDate current spec text =
+parseDate :: Day -> DateFormat -> Text -> Either Text Day
+parseDate current (DateFormat spec) text =
   case completeDate current . fmap getFirst <$> parse (parseDate' spec <* eof) "date" text of
     Left err -> Left $ T.pack $ show err
     Right Nothing -> Left "Invalid Date"
