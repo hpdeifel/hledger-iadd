@@ -85,19 +85,19 @@ context _ _ _  (FinalQuestion _) = return []
 -- | Suggest the initial text of the entry box for each step
 --
 -- For example, it suggests today for the date prompt
-suggest :: HL.Journal -> Step -> IO (Maybe Text)
-suggest _ DateQuestion =
-  Just . T.pack . formatTime defaultTimeLocale "%d.%m.%Y" <$> getCurrentTime
-suggest _ (DescriptionQuestion _) = return Nothing
-suggest journal (AccountQuestion trans) = return $
+suggest :: HL.Journal -> DateFormat -> Step -> IO (Maybe Text)
+suggest _ dateFormat DateQuestion =
+  Just . printDate dateFormat . utctDay <$> getCurrentTime
+suggest _ _ (DescriptionQuestion _) = return Nothing
+suggest journal _ (AccountQuestion trans) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
     else T.pack . HL.paccount <$> (suggestNextPosting trans =<< findLastSimilar journal trans)
-suggest journal (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
+suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
   if transactionBalanced trans
     then HL.pamount <$> (findPostingByAcc account =<< findLastSimilar journal trans)
     else Just $ negativeAmountSum trans
-suggest _ (FinalQuestion _) = return $ Just "y"
+suggest _ _ (FinalQuestion _) = return $ Just "y"
 
 -- | Returns true if the pattern is not empty and all of its words occur in the string
 --

@@ -79,7 +79,7 @@ event as ev = case ev of
 
 reset :: AppState -> IO AppState
 reset as = do
-  sugg <- suggest (asJournal as) DateQuestion
+  sugg <- suggest (asJournal as) (asDateFormat as) DateQuestion
   return as
     { asStep = DateQuestion
     , asEditor = clearEdit (asEditor as)
@@ -109,7 +109,7 @@ doNextStep useSelected as = do
     Left err -> return as { asMessage = err }
     Right (Finished trans) -> do
       liftIO $ addToJournal trans (asFilename as)
-      sugg <- suggest (asJournal as) DateQuestion
+      sugg <- suggest (asJournal as) (asDateFormat as) DateQuestion
       return AppState
         { asStep = DateQuestion
         , asJournal = HL.addTransaction trans (asJournal  as)
@@ -121,7 +121,7 @@ doNextStep useSelected as = do
         , asDateFormat = asDateFormat as
         }
     Right (Step s') -> do
-      sugg <- suggest (asJournal as) s'
+      sugg <- suggest (asJournal as) (asDateFormat as) s'
       ctx' <- ctxList . V.fromList <$> context (asJournal as) (asDateFormat as) "" s'
       return as { asStep = s'
                 , asEditor = clearEdit (asEditor as)
@@ -134,7 +134,7 @@ doUndo :: AppState -> IO AppState
 doUndo as = case undo (asStep as) of
   Left msg -> return as { asMessage = "Undo failed: " <> msg }
   Right step -> do
-    sugg <- suggest (asJournal as) step
+    sugg <- suggest (asJournal as) (asDateFormat as) step
     setContext $ as { asStep = step
                     , asEditor = clearEdit (asEditor as)
                     , asSuggestion = sugg
@@ -210,7 +210,7 @@ main = do
 
   let edit = editor "Edit" (str . concat) (Just 1) ""
 
-  sugg <- suggest journal DateQuestion
+  sugg <- suggest journal date DateQuestion
 
   let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome" path date
 
