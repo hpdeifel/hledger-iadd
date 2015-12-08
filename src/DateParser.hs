@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, TupleSections #-}
-{-# LANGUAGE DeriveFunctor, LambdaCase #-}
+{-# LANGUAGE DeriveFunctor, LambdaCase, ViewPatterns #-}
 
 module DateParser
        ( DateFormat
@@ -10,6 +10,8 @@ module DateParser
        , parseDateWithToday
        , parseDateOrHLDate
 
+       , printDate
+
        -- * Utilities
        , weekDay
        ) where
@@ -19,6 +21,10 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Text.Buildable (Buildable,build)
+import           Data.Text.Format hiding (build)
+import qualified Data.Text.Lazy as TL
+import           Data.Text.Lazy.Builder (Builder, toLazyText)
 import           Data.Time hiding (parseTime)
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
@@ -169,3 +175,26 @@ weekDay wday current =
   let (_, _, wday') = toWeekDate current
       difference = negate $ (wday' - wday) `mod` 7
   in addDays (toInteger difference) current
+
+
+printDate :: DateFormat -> Day -> Text
+printDate (DateFormat spec) day = TL.toStrict $ toLazyText $ printDate' spec day
+
+printDate' :: [DateSpec] -> Day -> Builder
+printDate' [] _ = ""
+printDate' (DateYear:ds) day@(toGregorian -> (y,_,_)) =
+  build y <> printDate' ds day
+printDate' (DateYearShort:ds) day@(toGregorian -> (y,_,_))
+  | y > 2000  = twoDigits (y-2000) <> printDate' ds day
+  | otherwise = twoDigits y <> printDate' ds day
+printDate' (DateMonth:ds) day@(toGregorian -> (_,m,_)) =
+  twoDigits m <> printDate' ds day
+printDate' (DateDay:ds) day@(toGregorian -> (_,_,d)) =
+  twoDigits d <> printDate' ds day
+printDate' (DateString s:ds) day =
+  build s <> printDate' ds day
+printDate' (DateOptional opt:ds) day =
+  printDate' opt day <> printDate' ds day
+
+twoDigits :: Buildable a => a -> Builder
+twoDigits = left 2 '0'

@@ -39,6 +39,7 @@ executable hledger-iadd
                      , containers >= 0.5
                      , optparse-applicative
                      , directory
+                     , text-format
 
   ghc-options:         -threaded
 
@@ -65,4 +66,5 @@ test-suite hledger-iadd-tests
                     , tasty
                     , tasty-hunit
                     , tasty-quickcheck
+                    , text-format
   ghc-options:        -threaded
