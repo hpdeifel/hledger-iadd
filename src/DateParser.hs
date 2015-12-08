@@ -8,7 +8,9 @@ module DateParser
 
        , parseDate
        , parseDateWithToday
-       , parseDateOrHLDate
+
+       , parseHLDate
+       , parseHLDateWithToday
 
        , printDate
 
@@ -45,18 +47,13 @@ data DateSpec = DateYear
                 deriving (Show, Eq)
 
 
--- | Try to parse date according to given DateSpec and then using hledgers
--- internal parsing, if the first fails.
-parseDateOrHLDate :: DateFormat -> Text -> IO (Either Text Day)
-parseDateOrHLDate spec text =
-  parseDateWithToday spec text >>= \case
-    Right res -> return $ Right res
-    Left err -> case parse HL.smartdate "date" (T.unpack text) of
-      Right res -> do
-        today <- utctDay <$> getCurrentTime
-        return $ Right $ HL.fixSmartDate today res
-      Left _ -> return $ Left err
+parseHLDate :: Day -> Text -> Either Text Day
+parseHLDate current text = case parse HL.smartdate "date" (T.unpack text) of
+  Right res -> Right $ HL.fixSmartDate current res
+  Left err -> Left $ T.pack $ show err
 
+parseHLDateWithToday :: Text -> IO (Either Text Day)
+parseHLDateWithToday text = flip parseHLDate text . utctDay <$> getCurrentTime
 
 -- | Corresponds to %d[.[%m[.[%y]]]]
 german :: DateFormat

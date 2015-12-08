@@ -100,12 +100,12 @@ editText = T.pack . concat . getEditContents . asEditor
 
 doNextStep :: Bool -> AppState -> IO AppState
 doNextStep useSelected as = do
-  let name = fromMaybe (editText as) $
-               msum [ if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
-                    , asMaybe (editText as)
-                    , asSuggestion as
+  let name = fromMaybe (Left $ editText as) $
+               msum [ Right <$> if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
+                    , Left <$> asMaybe (editText as)
+                    , Left <$> asSuggestion as
                     ]
-  s <- nextStep (asJournal as) name (asStep as)
+  s <- nextStep (asJournal as) (asDateFormat as) name (asStep as)
   case s of
     Left err -> return as { asMessage = err }
     Right (Finished trans) -> do

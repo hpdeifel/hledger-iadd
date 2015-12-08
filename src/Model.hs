@@ -33,27 +33,28 @@ data Step = DateQuestion
 data MaybeStep = Finished HL.Transaction
                | Step Step
 
-nextStep :: HL.Journal -> Text -> Step -> IO (Either Text MaybeStep)
-nextStep journal entryText current = case current of
+nextStep :: HL.Journal -> DateFormat -> Either Text Text -> Step -> IO (Either Text MaybeStep)
+nextStep journal dateFormat entryText current = case current of
   DateQuestion ->
-    fmap (Step . DescriptionQuestion) <$> parseDateOrHLDate german entryText
+    fmap (Step . DescriptionQuestion) <$> either (parseDateWithToday dateFormat)
+                                                 parseHLDateWithToday
+                                                 entryText
   DescriptionQuestion day -> return $ Right $ Step $
     AccountQuestion HL.nulltransaction { HL.tdate = day
-                                       , HL.tdescription = T.unpack entryText}
+                                       , HL.tdescription = T.unpack (fromEither entryText)}
   AccountQuestion trans
-    | T.null entryText -> return $ Right $ Step $ FinalQuestion trans
+    | T.null (fromEither entryText) -> return $ Right $ Step $ FinalQuestion trans
     | otherwise        -> return $ Right $ Step $
-      AmountQuestion (T.unpack entryText) trans
-  AmountQuestion name trans -> case parseAmount (HL.jContext journal) entryText of
+      AmountQuestion (T.unpack (fromEither entryText)) trans
+  AmountQuestion name trans -> case parseAmount (HL.jContext journal) (fromEither entryText) of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
       let newPosting = post' name amount
       in AccountQuestion (addPosting newPosting trans)
 
   FinalQuestion trans
-    | entryText == "y" -> return $ Right $ Finished trans
+    | fromEither entryText == "y" -> return $ Right $ Finished trans
     | otherwise -> return $ Right $ Step $ AccountQuestion trans
-
 
 -- | Reverses the last step.
 --
@@ -173,3 +174,6 @@ descUses journal = compare `on` (Down . flip M.lookup usesMap)
         -- Add one to the current count of this element
         count :: Text -> M.Map Text (Sum Int) -> M.Map Text (Sum Int)
         count = M.alter (<> Just 1)
+
+fromEither :: Either a a -> a
+fromEither = either id id
