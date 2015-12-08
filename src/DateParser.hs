@@ -68,7 +68,7 @@ german = DateFormat
                                              ,DateOptional [DateYearShort]]]]]
 
 parseDateFormat :: Text -> Either Text DateFormat
-parseDateFormat text = case parse dateSpec "input" text of
+parseDateFormat text = case parse dateSpec "date-format" text of
   Left err  -> Left $ T.pack $ show err
   Right res -> Right res
 

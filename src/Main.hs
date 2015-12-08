@@ -17,6 +17,7 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import           Data.Text.Zipper
 import qualified Data.Vector as V
 import qualified Hledger as HL
@@ -199,8 +200,8 @@ main = do
 
   date <- case parseDateFormat (T.pack $ optDateFormat opts) of
     Left err -> do
-      hPutStrLn stderr "Could not parse date format"
-      hPutStr stderr (show err)
+      hPutStr stderr "Could not parse date format: "
+      T.hPutStrLn stderr err
       exitWith (ExitFailure 1)
     Right res -> return res
 
