@@ -8,4 +8,4 @@ extra-deps:
 - vty-5.4.0
 - hledger-lib-0.27
 - uglymemo-0.1.0.1
-resolver: lts-3.12
+resolver: lts-3.19

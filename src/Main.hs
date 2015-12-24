@@ -27,6 +27,7 @@ import           System.Directory
 import           System.Exit
 import           System.IO
 
+import           Brick.Widgets.HelpMessage
 import           DateParser
 import           Model
 import           View
@@ -40,11 +41,32 @@ data AppState = AppState
   , asMessage :: Text
   , asFilename :: FilePath
   , asDateFormat :: DateFormat
+  , asHelpShown :: Bool
   }
 
+bindings :: KeyBindings
+bindings = KeyBindings
+  [ ("Denial",
+     [ ("C-c", "Quit without saving the current transaction")
+     , ("Esc", "Abort the current transaction")
+     ])
+  , ("Anger",
+     [ ("F1, Alt-?", "Show help screen")])
+  , ("Bargaining",
+     [ ("C-n", "Select the next context item")
+       , ("C-p", "Select the previous context item")
+       , ("Tab", "Insert currently selected answer into text area")
+       , ("C-z", "Undo")
+       ])
+  , ("Acceptance",
+     [ ("Ret", "Accept the currently selected answer")
+     , ("Alt-Ret", "Accept the current answer verbatim, ignoring selection")
+     ])]
 
 draw :: AppState -> [Widget]
-draw as = [ui]
+draw as
+  | asHelpShown as = [helpWidget bindings, ui]
+  | otherwise = [ui]
   where ui =  viewState (asStep as)
           <=> hBorder
           <=> (viewQuestion (asStep as)
@@ -57,26 +79,31 @@ draw as = [ui]
           <=> txt (asMessage as <> " ") -- TODO Add space only if message is empty
 
 event :: AppState -> Event -> EventM (Next AppState)
-event as ev = case ev of
-  EvKey (KChar 'c') [MCtrl] -> halt as
-  EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
-                                           , asMessage = ""}
-  EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
-                                           , asMessage = ""}
-  EvKey (KChar '\t') [] -> continue (insertSelected as)
-  EvKey KEsc [] -> liftIO (reset as) >>= continue
-  EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
-  EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
-  EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
-  _ -> (AppState <$> handleEvent ev (asEditor as)
-                 <*> return (asStep as)
-                 <*> return (asJournal as)
-                 <*> return (asContext as)
-                 <*> return (asSuggestion as)
-                 <*> return ""
-                 <*> return (asFilename as))
-                 <*> return (asDateFormat as)
-       >>= liftIO . setContext >>= continue
+event as ev
+  | asHelpShown as = continue as { asHelpShown = False }
+  | otherwise = case ev of
+      EvKey (KChar 'c') [MCtrl] -> halt as
+      EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
+                                               , asMessage = ""}
+      EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
+                                               , asMessage = ""}
+      EvKey (KChar '\t') [] -> continue (insertSelected as)
+      EvKey KEsc [] -> liftIO (reset as) >>= continue
+      EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
+      EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
+      EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
+      EvKey (KFun 1) [] -> continue as { asHelpShown = True }
+      EvKey (KChar '?') [MMeta] -> continue as { asHelpShown = True, asMessage = "Help" }
+      _ -> (AppState <$> handleEvent ev (asEditor as)
+                     <*> return (asStep as)
+                     <*> return (asJournal as)
+                     <*> return (asContext as)
+                     <*> return (asSuggestion as)
+                     <*> return ""
+                     <*> return (asFilename as))
+                     <*> return (asDateFormat as)
+                     <*> return False
+           >>= liftIO . setContext >>= continue
 
 reset :: AppState -> IO AppState
 reset as = do
@@ -120,6 +147,7 @@ doNextStep useSelected as = do
         , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
         , asDateFormat = asDateFormat as
+        , asHelpShown = False
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) (asDateFormat as) s'
@@ -155,7 +183,9 @@ asMaybe t
 
 attrs :: AttrMap
 attrs = attrMap defAttr
-  [ (listSelectedAttr, black `on` white) ]
+  [ (listSelectedAttr, black `on` white)
+  , (helpAttr <> "title", fg green)
+  ]
 
 clearEdit :: Editor -> Editor
 clearEdit = setEdit ""
@@ -214,7 +244,8 @@ main = do
 
   sugg <- suggest journal date DateQuestion
 
-  let as = AppState edit DateQuestion journal (ctxList V.empty) sugg "Welcome" path date
+  let welcome = "Welcome. Press F1 (or Alt-?) for help."
+      as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date False
 
   void $ defaultMain app as
 
