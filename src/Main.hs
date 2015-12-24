@@ -4,6 +4,7 @@ module Main where
 
 import           Brick
 import           Brick.Widgets.Border
+import           Brick.Widgets.BetterDialog
 import           Brick.Widgets.Edit
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
@@ -41,8 +42,10 @@ data AppState = AppState
   , asMessage :: Text
   , asFilename :: FilePath
   , asDateFormat :: DateFormat
-  , asHelpShown :: Bool
+  , asDialog :: DialogShown
   }
+
+data DialogShown = NoDialog | HelpDialog | QuitDialog | AbortDialog
 
 bindings :: KeyBindings
 bindings = KeyBindings
@@ -64,9 +67,12 @@ bindings = KeyBindings
      ])]
 
 draw :: AppState -> [Widget]
-draw as
-  | asHelpShown as = [helpWidget bindings, ui]
-  | otherwise = [ui]
+draw as = case asDialog as of
+  HelpDialog -> [helpWidget bindings, ui]
+  QuitDialog -> [quitDialog, ui]
+  AbortDialog -> [abortDialog, ui]
+  NoDialog -> [ui]
+
   where ui =  viewState (asStep as)
           <=> hBorder
           <=> (viewQuestion (asStep as)
@@ -78,32 +84,50 @@ draw as
           <=> hBorder
           <=> txt (asMessage as <> " ") -- TODO Add space only if message is empty
 
+        quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
+        abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
+
 event :: AppState -> Event -> EventM (Next AppState)
-event as ev
-  | asHelpShown as = continue as { asHelpShown = False }
-  | otherwise = case ev of
-      EvKey (KChar 'c') [MCtrl] -> halt as
-      EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
-                                               , asMessage = ""}
-      EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
-                                               , asMessage = ""}
-      EvKey (KChar '\t') [] -> continue (insertSelected as)
-      EvKey KEsc [] -> liftIO (reset as) >>= continue
-      EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
-      EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
-      EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
-      EvKey (KFun 1) [] -> continue as { asHelpShown = True }
-      EvKey (KChar '?') [MMeta] -> continue as { asHelpShown = True, asMessage = "Help" }
-      _ -> (AppState <$> handleEvent ev (asEditor as)
-                     <*> return (asStep as)
-                     <*> return (asJournal as)
-                     <*> return (asContext as)
-                     <*> return (asSuggestion as)
-                     <*> return ""
-                     <*> return (asFilename as))
-                     <*> return (asDateFormat as)
-                     <*> return False
-           >>= liftIO . setContext >>= continue
+event as ev = case asDialog as of
+  HelpDialog -> continue as { asDialog = NoDialog }
+  QuitDialog -> case ev of
+    EvKey key []
+      | key `elem` [KChar 'y', KEnter] -> halt as
+      | otherwise -> continue as { asDialog = NoDialog }
+    _ -> continue as
+  AbortDialog -> case ev of
+    EvKey key []
+      | key `elem` [KChar 'y', KEnter] ->
+        liftIO (reset as { asDialog = NoDialog }) >>= continue
+      | otherwise -> continue as { asDialog = NoDialog }
+    _ -> continue as
+  NoDialog -> case ev of
+    EvKey (KChar 'c') [MCtrl]
+      | asStep as == DateQuestion -> halt as
+      | otherwise -> continue as { asDialog = QuitDialog }
+    EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
+                                             , asMessage = ""}
+    EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
+                                             , asMessage = ""}
+    EvKey (KChar '\t') [] -> continue (insertSelected as)
+    EvKey KEsc []
+      | asStep as == DateQuestion -> liftIO (reset as) >>= continue
+      | otherwise -> continue as { asDialog = AbortDialog }
+    EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
+    EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
+    EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
+    EvKey (KFun 1) [] -> continue as { asDialog = HelpDialog }
+    EvKey (KChar '?') [MMeta] -> continue as { asDialog = HelpDialog, asMessage = "Help" }
+    _ -> (AppState <$> handleEvent ev (asEditor as)
+                   <*> return (asStep as)
+                   <*> return (asJournal as)
+                   <*> return (asContext as)
+                   <*> return (asSuggestion as)
+                   <*> return ""
+                   <*> return (asFilename as))
+                   <*> return (asDateFormat as)
+                   <*> return NoDialog
+         >>= liftIO . setContext >>= continue
 
 reset :: AppState -> IO AppState
 reset as = do
@@ -147,7 +171,7 @@ doNextStep useSelected as = do
         , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
         , asDateFormat = asDateFormat as
-        , asHelpShown = False
+        , asDialog = HelpDialog
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) (asDateFormat as) s'
@@ -245,7 +269,7 @@ main = do
   sugg <- suggest journal date DateQuestion
 
   let welcome = "Welcome. Press F1 (or Alt-?) for help."
-      as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date False
+      as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date NoDialog
 
   void $ defaultMain app as
 

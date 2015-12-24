@@ -28,10 +28,12 @@ data Step = DateQuestion
           | AccountQuestion HL.Transaction
           | AmountQuestion HL.AccountName HL.Transaction
           | FinalQuestion HL.Transaction
+          deriving (Eq, Show)
 
 
 data MaybeStep = Finished HL.Transaction
                | Step Step
+               deriving (Eq, Show)
 
 nextStep :: HL.Journal -> DateFormat -> Either Text Text -> Step -> IO (Either Text MaybeStep)
 nextStep journal dateFormat entryText current = case current of
