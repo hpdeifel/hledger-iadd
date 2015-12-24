@@ -139,6 +139,7 @@ doUndo as = case undo (asStep as) of
     setContext $ as { asStep = step
                     , asEditor = clearEdit (asEditor as)
                     , asSuggestion = sugg
+                    , asMessage = "Undo."
                     }
 
 insertSelected :: AppState -> AppState
