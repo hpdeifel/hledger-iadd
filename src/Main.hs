@@ -171,7 +171,7 @@ doNextStep useSelected as = do
         , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
         , asDateFormat = asDateFormat as
-        , asDialog = HelpDialog
+        , asDialog = NoDialog
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) (asDateFormat as) s'
