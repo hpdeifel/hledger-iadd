@@ -223,10 +223,10 @@ attrs = attrMap defAttr
   , (helpAttr <> "title", fg green)
   ]
 
-clearEdit :: (Editor n) -> (Editor n)
+clearEdit :: Editor n -> Editor n
 clearEdit = setEdit ""
 
-setEdit :: Text -> (Editor n) -> (Editor n)
+setEdit :: Text -> Editor n -> Editor n
 setEdit content edit = edit & editContentsL .~ zipper
   where zipper = gotoEOL (stringZipper [T.unpack content] (Just 1))
 
@@ -293,7 +293,7 @@ main = do
                   , appStartEvent = return
                   } :: App AppState Event Name
 
-expand :: (Widget n) -> (Widget n)
+expand :: Widget n -> Widget n
 expand = padBottom Max
 
 ctxList :: V.Vector e -> List Name e

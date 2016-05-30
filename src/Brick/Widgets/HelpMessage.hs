@@ -18,7 +18,6 @@ import Data.Text (Text)
 import Data.Monoid
 import Data.List
 import Control.Lens
-import Data.Proxy
 
 type Title = Text
 
