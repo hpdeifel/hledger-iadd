@@ -95,7 +95,13 @@ draw as = case asDialog as of
 
 event :: AppState -> Event -> EventM Name (Next AppState)
 event as ev = case asDialog as of
-  HelpDialog help -> continue as { asDialog = NoDialog }
+  HelpDialog helpDia -> case ev of
+    EvKey key []
+      | key `elem` [KChar 'q', KEsc] -> continue as { asDialog = NoDialog }
+      | otherwise                    -> do
+          helpDia' <- handleHelpEvent helpDia ev
+          continue as { asDialog = HelpDialog helpDia' }
+    _ -> continue as
   QuitDialog -> case ev of
     EvKey key []
       | key `elem` [KChar 'y', KEnter] -> halt as
