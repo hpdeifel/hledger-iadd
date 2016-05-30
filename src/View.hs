@@ -11,7 +11,7 @@ import qualified Hledger as HL
 
 import           Model
 
-viewState :: Step -> Widget
+viewState :: Step -> Widget n
 viewState DateQuestion = txt " "
 viewState (DescriptionQuestion date) = str $
   formatTime defaultTimeLocale "%Y/%m/%d" date
@@ -22,7 +22,7 @@ viewState (AmountQuestion acc trans) = str $
 viewState (FinalQuestion trans) = str $
   HL.showTransaction trans
 
-viewQuestion :: Step -> Widget
+viewQuestion :: Step -> Widget n
 viewQuestion DateQuestion = txt "Date"
 viewQuestion (DescriptionQuestion _) = txt "Description"
 viewQuestion (AccountQuestion trans) = str $
@@ -33,14 +33,14 @@ viewQuestion (FinalQuestion trans) = txt $ mconcat $
   "Add this transaction to the journal? Y/n"
   : if HL.isTransactionBalanced Nothing trans then [] else ["\nTransaction not balanced!!!"]
 
-viewContext :: List Text -> Widget
-viewContext = flip renderList renderItem
+viewContext :: (Ord n, Show n) => List n Text -> Widget n
+viewContext = renderList renderItem True
 
-viewSuggestion :: Maybe Text -> Widget
+viewSuggestion :: Maybe Text -> Widget n
 viewSuggestion Nothing = txt ""
 viewSuggestion (Just t) = txt $ " (" <> t <> ")"
 
-renderItem :: Bool -> Text -> Widget
+renderItem :: Bool -> Text -> Widget n
 renderItem True = withAttr listSelectedAttr . txt
 renderItem False = txt
 

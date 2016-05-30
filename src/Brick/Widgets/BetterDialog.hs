@@ -11,11 +11,11 @@ import Data.Monoid
 import Data.List
 import Control.Lens
 
-dialog :: Text -> Text -> Widget
+dialog :: Text -> Text -> Widget n
 dialog title = center . dialog' title
 
 -- TODO Remove duplication from HelpMessage
-center :: Widget -> Widget
+center :: Widget n -> Widget n
 center w = Widget Fixed Fixed $ do
   c <- getContext
   res <- render w
@@ -26,7 +26,7 @@ center w = Widget Fixed Fixed $ do
 
   render $ translateBy (Location (x,y)) $ raw (res^.imageL)
 
-dialog' :: Text -> Text -> Widget
+dialog' :: Text -> Text -> Widget n
 dialog' title content = Widget Fixed Fixed $ do
   c <- getContext
 

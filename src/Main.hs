@@ -34,10 +34,10 @@ import           Model
 import           View
 
 data AppState = AppState
-  { asEditor :: Editor
+  { asEditor :: Editor Name
   , asStep :: Step
   , asJournal :: HL.Journal
-  , asContext :: List Text
+  , asContext :: List Name Text
   , asSuggestion :: Maybe Text
   , asMessage :: Text
   , asFilename :: FilePath
@@ -45,7 +45,13 @@ data AppState = AppState
   , asDialog :: DialogShown
   }
 
-data DialogShown = NoDialog | HelpDialog | QuitDialog | AbortDialog
+data Name = HelpName | ListName | EditorName
+  deriving (Ord, Show, Eq)
+
+data DialogShown = NoDialog | HelpDialog (HelpWidget Name) | QuitDialog | AbortDialog
+
+myHelpDialog :: DialogShown
+myHelpDialog = HelpDialog (helpWidget HelpName bindings)
 
 bindings :: KeyBindings
 bindings = KeyBindings
@@ -66,9 +72,9 @@ bindings = KeyBindings
      , ("Alt-Ret", "Accept the current answer verbatim, ignoring selection")
      ])]
 
-draw :: AppState -> [Widget]
+draw :: AppState -> [Widget Name]
 draw as = case asDialog as of
-  HelpDialog -> [helpWidget bindings, ui]
+  HelpDialog h -> [renderHelpWidget h, ui]
   QuitDialog -> [quitDialog, ui]
   AbortDialog -> [abortDialog, ui]
   NoDialog -> [ui]
@@ -78,7 +84,7 @@ draw as = case asDialog as of
           <=> (viewQuestion (asStep as)
                <+> viewSuggestion (asSuggestion as)
                <+> txt ": "
-               <+> renderEditor (asEditor as))
+               <+> renderEditor True (asEditor as))
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
@@ -87,9 +93,9 @@ draw as = case asDialog as of
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
 
-event :: AppState -> Event -> EventM (Next AppState)
+event :: AppState -> Event -> EventM Name (Next AppState)
 event as ev = case asDialog as of
-  HelpDialog -> continue as { asDialog = NoDialog }
+  HelpDialog help -> continue as { asDialog = NoDialog }
   QuitDialog -> case ev of
     EvKey key []
       | key `elem` [KChar 'y', KEnter] -> halt as
@@ -116,9 +122,9 @@ event as ev = case asDialog as of
     EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
     EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
     EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
-    EvKey (KFun 1) [] -> continue as { asDialog = HelpDialog }
-    EvKey (KChar '?') [MMeta] -> continue as { asDialog = HelpDialog, asMessage = "Help" }
-    _ -> (AppState <$> handleEvent ev (asEditor as)
+    EvKey (KFun 1) [] -> continue as { asDialog = myHelpDialog }
+    EvKey (KChar '?') [MMeta] -> continue as { asDialog = myHelpDialog, asMessage = "Help" }
+    _ -> (AppState <$> handleEditorEvent ev (asEditor as)
                    <*> return (asStep as)
                    <*> return (asJournal as)
                    <*> return (asContext as)
@@ -211,10 +217,10 @@ attrs = attrMap defAttr
   , (helpAttr <> "title", fg green)
   ]
 
-clearEdit :: Editor -> Editor
+clearEdit :: (Editor n) -> (Editor n)
 clearEdit = setEdit ""
 
-setEdit :: Text -> Editor -> Editor
+setEdit :: Text -> (Editor n) -> (Editor n)
 setEdit content edit = edit & editContentsL .~ zipper
   where zipper = gotoEOL (stringZipper [T.unpack content] (Just 1))
 
@@ -264,7 +270,7 @@ main = do
   journalContents <- readFile path
   Right journal <- runExceptT $ HL.parseAndFinaliseJournal HL.journalp True path journalContents
 
-  let edit = editor "Edit" (str . concat) (Just 1) ""
+  let edit = editor EditorName (str . concat) (Just 1) ""
 
   sugg <- suggest journal date DateQuestion
 
@@ -279,10 +285,10 @@ main = do
                   , appAttrMap = const attrs
                   , appLiftVtyEvent = id
                   , appStartEvent = return
-                  } :: App AppState Event
+                  } :: App AppState Event Name
 
-expand :: Widget -> Widget
+expand :: (Widget n) -> (Widget n)
 expand = padBottom Max
 
-ctxList :: V.Vector e -> List e
-ctxList v = (if V.null v then id else listMoveTo 0) $ list "Context" v 1
+ctxList :: V.Vector e -> List Name e
+ctxList v = (if V.null v then id else listMoveTo 0) $ list ListName v 1

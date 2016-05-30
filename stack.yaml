@@ -3,9 +3,5 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.2.3
-- text-zipper-0.3.1
-- vty-5.4.0
-- hledger-lib-0.27
-- uglymemo-0.1.0.1
-resolver: lts-3.19
+- brick-0.7
+resolver: lts-6.1

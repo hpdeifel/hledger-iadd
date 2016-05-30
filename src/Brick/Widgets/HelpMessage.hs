@@ -1,10 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, NamedFieldPuns, ConstraintKinds #-}
 module Brick.Widgets.HelpMessage
-       ( Title
+       ( HelpWidget
+       , Title
        , KeyBindings(..)
        , helpWidget
+       , renderHelpWidget
        , helpAttr
        , resetHelpWidget
+       , handleHelpEvent
        ) where
 
 import Brick
@@ -15,16 +18,28 @@ import Data.Text (Text)
 import Data.Monoid
 import Data.List
 import Control.Lens
+import Data.Proxy
 
 type Title = Text
 
 -- [(Title, [(Key, Description)])]
 newtype KeyBindings = KeyBindings [(Title, [(Text, Text)])]
 
-helpWidget :: KeyBindings -> Widget
-helpWidget bindings = center $ helpWidget' bindings
+data HelpWidget n = HelpWidget
+  { keyBindings :: KeyBindings
+  , name :: n
+  }
 
-center :: Widget -> Widget
+type Name n = (Ord n, Show n)
+
+helpWidget :: n -> KeyBindings -> HelpWidget n
+helpWidget = flip HelpWidget
+
+renderHelpWidget :: Name n => HelpWidget n -> Widget n
+renderHelpWidget HelpWidget{keyBindings, name} =
+  center $ renderHelpWidget' name keyBindings
+
+center :: Widget n -> Widget n
 center w = Widget Fixed Fixed $ do
   c <- getContext
   res <- render w
@@ -35,48 +50,47 @@ center w = Widget Fixed Fixed $ do
 
   render $ translateBy (Location (x,y)) $ raw (res^.imageL)
 
-helpWidget' :: KeyBindings -> Widget
-helpWidget' (KeyBindings bindings) = Widget Fixed Fixed $ do
+renderHelpWidget' :: Name n => n -> KeyBindings -> Widget n
+renderHelpWidget' name (KeyBindings bindings) = Widget Fixed Fixed $ do
   c <- getContext
 
   render $
     hLimit (min 80 $ c^.availWidthL) $
     vLimit (min 30 $ c^.availHeightL) $
     borderWithLabel (txt "Help") $
-    viewport "helpViewport" Vertical $
+    viewport name Vertical $
     vBox $ intersperse (txt " ") $
     map (uncurry section) bindings
 
-scroller :: ViewportScroll
-scroller = viewportScroll "helpViewport"
+scroller :: HelpWidget n -> ViewportScroll n
+scroller HelpWidget{name} = viewportScroll name
 
-instance HandleEvent KeyBindings where
-  handleEvent (EvKey k _) b = case k of
-    KChar 'j' -> vScrollBy scroller 1 >> return b
-    KDown     -> vScrollBy scroller 1 >> return b
-    KChar 'k' -> vScrollBy scroller (-1) >> return b
-    KUp       -> vScrollBy scroller (-1) >> return b
-    KChar 'g' -> vScrollToBeginning scroller >> return b
-    KHome     -> vScrollToBeginning scroller >> return b
-    KChar 'G' -> vScrollToEnd scroller >> return b
-    KEnd      -> vScrollToEnd scroller >> return b
-    KPageUp   -> vScrollPage scroller Up >> return b
-    KPageDown -> vScrollPage scroller Down >> return b
-    _         -> return b
+handleHelpEvent :: HelpWidget n -> Event -> EventM n (HelpWidget n)
+handleHelpEvent help (EvKey k _) = case k of
+  KChar 'j' -> vScrollBy (scroller help) 1 >> return help
+  KDown     -> vScrollBy (scroller help) 1 >> return help
+  KChar 'k' -> vScrollBy (scroller help) (-1) >> return help
+  KUp       -> vScrollBy (scroller help) (-1) >> return help
+  KChar 'g' -> vScrollToBeginning (scroller help) >> return help
+  KHome     -> vScrollToBeginning (scroller help) >> return help
+  KChar 'G' -> vScrollToEnd (scroller help) >> return help
+  KEnd      -> vScrollToEnd (scroller help) >> return help
+  KPageUp   -> vScrollPage (scroller help) Up >> return help
+  KPageDown -> vScrollPage (scroller help) Down >> return help
+  _         -> return help
+handleHelpEvent help _ = return help
 
-  handleEvent _ b = return b
 
+resetHelpWidget :: HelpWidget n -> EventM n ()
+resetHelpWidget = vScrollToBeginning . scroller
 
-resetHelpWidget :: EventM ()
-resetHelpWidget = vScrollToBeginning scroller
-
-key :: Text -> Text -> Widget
+key :: Text -> Text -> Widget n
 key k h =  markup (("  " <> k) @? (helpAttr <> "key"))
        <+> padLeft Max (markup (h @? (helpAttr <> "description")))
 
 helpAttr :: AttrName
 helpAttr = "help"
 
-section :: Title -> [(Text, Text)] -> Widget
+section :: Title -> [(Text, Text)] -> Widget n
 section title keys =  markup ((title <> ":") @? (helpAttr <> "title"))
                   <=> vBox (map (uncurry key) keys)
