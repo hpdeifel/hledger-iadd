@@ -119,8 +119,12 @@ event as ev = case asDialog as of
       | otherwise -> continue as { asDialog = QuitDialog }
     EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
                                              , asMessage = ""}
+    EvKey KDown [] -> continue as { asContext = listMoveDown $ asContext as
+                                  , asMessage = ""}
     EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
                                              , asMessage = ""}
+    EvKey KUp [] -> continue as { asContext = listMoveUp $ asContext as
+                               , asMessage = ""}
     EvKey (KChar '\t') [] -> continue (insertSelected as)
     EvKey KEsc []
       | asStep as == DateQuestion -> liftIO (reset as) >>= continue
