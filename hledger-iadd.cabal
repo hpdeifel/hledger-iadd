@@ -1,5 +1,5 @@
 name:                hledger-iadd
-version:             0.1.0.0
+version:             0.1.0
 synopsis:            A terminal UI as drop-in replacement for hledger add
 description:         Please see README.md
 homepage:            http://github.com/rootzlevel/hledger-iadd#readme
@@ -7,7 +7,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Hans-Peter Deifel
 maintainer:          hpd@hpdeifel.de
-copyright:           2015 Hans-Peter Deifel
+copyright:           2016 Hans-Peter Deifel
 category:            Finance, Console
 build-type:          Simple
 cabal-version:       >=1.10
