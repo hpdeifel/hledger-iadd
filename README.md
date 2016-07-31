@@ -2,6 +2,8 @@
 
 An interactive terminal UI as drop-in replacement for `hledger add`.
 
+![Screencast](doc/screencast.gif)
+
 ## Features
 
 This project improves in the following ways on hledger's `add` command:
