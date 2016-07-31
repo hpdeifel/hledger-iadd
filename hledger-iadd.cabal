@@ -1,5 +1,5 @@
 name:                hledger-iadd
-version:             0.1.0
+version:             1.0
 synopsis:            A terminal UI as drop-in replacement for hledger add
 description:         Please see README.md
 homepage:            http://github.com/rootzlevel/hledger-iadd#readme
