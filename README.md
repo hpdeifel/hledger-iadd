@@ -93,12 +93,13 @@ order:
  5. The last two questions are repeated until you enter the empty account
  6. Do you want to add this transaction to the journal?
 
-To accept the default answer, immediately press `Return` at a promt.
+To accept the default answer, immediately press <kbd>Return</kbd> at a
+promt.
 
 While you type, the context area shows possible completions. Pressing
-`Return` answers the question with the currently selected completion.
-You can select differnt completions with <kbd>C-n</kbd> and
-<kbd>C-p</kbd>.
+<kbd>Return</kbd> answers the question with the currently selected
+completion. You can select differnt completions with <kbd>C-n</kbd>
+and <kbd>C-p</kbd>.
 
 The following keyboard shortcuts are available:
 
