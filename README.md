@@ -14,9 +14,8 @@ This project improves in the following ways on hledger's `add` command:
 
  - All actions while entering a transaction can be undone
 
- - Dates are expected in German format `%d.%m.%Y` or abbreviated as
-   `%d.%m` or simply `%d`. I intend to support other formats, but
-   that's what I use and it's currently the only one implemented.
+ - Configurable format for date input. Instead of `y/m/d` it is also
+   possible to use other formats like the german `d.m.y`.
 
 ## Installation
 ### stack
@@ -65,7 +64,10 @@ or simply `hledger-iadd`.
 The following command line options are available:
 
   - `-f/--file/`: Path to the journal file. (Default: `~/.hledger.journal`)
-  - `--date-format`: Format for parsing dates. (Default: `%d[.[%m[.[%y]]]]`)
+  - `--date-format`: Format for parsing dates. (Default:
+    `[[%y/]%m/]%d`, the usual ledger date format). Brackets can be
+    used to specify optional parts. E.g the german date format would
+    be `%d[.[%m[.[%y]]]]`
 
 The UI is partitioned in 4 regions:
 

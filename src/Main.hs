@@ -259,7 +259,7 @@ optionParser home = Options
   <*> strOption
         (  long "date-format"
         <> metavar "FORMAT"
-        <> value "%d[.[%m[.[%y]]]]"
+        <> value "[[%y/]%m/]%d"
         <> help "Format used to parse dates"
         )
 
