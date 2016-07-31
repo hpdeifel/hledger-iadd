@@ -18,12 +18,6 @@ This project improves in the following ways on hledger's `add` command:
    `%d.%m` or simply `%d`. I intend to support other formats, but
    that's what I use and it's currently the only one implemented.
 
-## Disclaimer
-
-This program has been written to support *my* use case and *my*
-journal. I have not tried to handle all possible cases, so it may very
-well break for yours. Please feel free to report such breakage as issue.
-
 ## Installation
 ### stack
 
@@ -68,9 +62,10 @@ You can start the program either with
 
 or simply `hledger-iadd`.
 
-`hledger-iadd` currently assumes that your journal is called
-`~/.hledger.journal`. If you prefer something else, please make a
-symlink or edit the source.
+The following command line options are available:
+
+  - `-f/--file/`: Path to the journal file. (Default: `~/.hledger.journal`)
+  - `--date-format`: Format for parsing dates. (Default: `%d[.[%m[.[%y]]]]`)
 
 The UI is partitioned in 4 regions:
 
