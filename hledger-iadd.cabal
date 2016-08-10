@@ -42,6 +42,9 @@ executable hledger-iadd
                      , optparse-applicative
                      , directory
                      , text-format
+                     , htoml
+                     , xdg-basedir
+                     , unordered-containers
 
   ghc-options:         -threaded
 

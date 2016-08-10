@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
 
 module Main where
@@ -8,12 +9,14 @@ import           Brick.Widgets.BetterDialog
 import           Brick.Widgets.Edit
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
-import           Graphics.Vty
+import           Graphics.Vty hiding (parseConfigFile)
 
+import           Control.Exception
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
+import           Data.HashMap.Strict as HM
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
@@ -25,8 +28,11 @@ import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
 import           Options.Applicative hiding (str)
 import           System.Directory
+import           System.Environment.XDG.BaseDir
 import           System.Exit
 import           System.IO
+import           Text.Toml
+import qualified Text.Toml.Types as TOML
 
 import           Brick.Widgets.HelpMessage
 import           DateParser
@@ -242,24 +248,50 @@ addToJournal trans path = appendFile path (show trans)
 ledgerPath :: FilePath -> FilePath
 ledgerPath home = home <> "/.hledger.journal"
 
+configPath :: IO FilePath
+configPath = getUserConfigFile "hledger-iadd" "config.conf"
+
 data Options = Options
   { optLedgerFile :: FilePath
   , optDateFormat :: String
   }
 
-optionParser :: FilePath -> Parser Options
-optionParser home = Options
+defaultOptions :: FilePath -> Options
+defaultOptions home = Options (ledgerPath home) "[[%y/]%m/]%d"
+
+nodeToStr :: TOML.Node -> Maybe String
+nodeToStr (TOML.VString t) = Just $ T.unpack t
+nodeToStr _ = Nothing
+
+parseConfigFile :: Options -> IO Options
+parseConfigFile def = do
+  path <- configPath
+  try (T.readFile path) >>= \case
+    Left (_ :: SomeException) -> return def
+    Right res -> case parseTomlDoc path res of
+      Left err -> do
+        print err
+        exitFailure
+      Right table -> return $ Options
+        { optLedgerFile = fromMaybe (optLedgerFile def) $
+                          HM.lookup "file" table >>= nodeToStr
+        , optDateFormat = fromMaybe (optDateFormat def) $
+                          HM.lookup "date-format" table >>= nodeToStr
+        }
+
+optionParser :: Options -> Parser Options
+optionParser def = Options
   <$> strOption
         (  long "file"
         <> short 'f'
         <> metavar "FILE"
-        <> value (ledgerPath home)
+        <> value (optLedgerFile def)
         <> help "Path to the journal file"
         )
   <*> strOption
         (  long "date-format"
         <> metavar "FORMAT"
-        <> value "[[%y/]%m/]%d"
+        <> value (optDateFormat def)
         <> help "Format used to parse dates"
         )
 
@@ -267,8 +299,10 @@ main :: IO ()
 main = do
   home <- getHomeDirectory
 
-  opts <- execParser $ info (helper <*> optionParser home) $
-             fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+  opts1 <- parseConfigFile (defaultOptions home)
+
+  opts <- execParser $ info (helper <*> optionParser opts1) $
+            fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
 
   date <- case parseDateFormat (T.pack $ optDateFormat opts) of
     Left err -> do
