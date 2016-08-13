@@ -313,24 +313,26 @@ main = do
 
   let path = optLedgerFile opts
   journalContents <- readFile path
-  Right journal <- runExceptT $ HL.parseAndFinaliseJournal HL.journalp True path journalContents
 
-  let edit = editor EditorName (str . concat) (Just 1) ""
+  runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
+    Left err -> hPutStrLn stderr err >> exitFailure
+    Right journal -> do
+      let edit = editor EditorName (str . concat) (Just 1) ""
 
-  sugg <- suggest journal date DateQuestion
+      sugg <- suggest journal date DateQuestion
 
-  let welcome = "Welcome. Press F1 (or Alt-?) for help."
-      as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date NoDialog
+      let welcome = "Welcome. Press F1 (or Alt-?) for help."
+          as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date NoDialog
 
-  void $ defaultMain app as
+      void $ defaultMain app as
 
-  where app = App { appDraw = draw
-                  , appChooseCursor = showFirstCursor
-                  , appHandleEvent = event
-                  , appAttrMap = const attrs
-                  , appLiftVtyEvent = id
-                  , appStartEvent = return
-                  } :: App AppState Event Name
+    where app = App { appDraw = draw
+                    , appChooseCursor = showFirstCursor
+                    , appHandleEvent = event
+                    , appAttrMap = const attrs
+                    , appLiftVtyEvent = id
+                    , appStartEvent = return
+                    } :: App AppState Event Name
 
 expand :: Widget n -> Widget n
 expand = padBottom Max
