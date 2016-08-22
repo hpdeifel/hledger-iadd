@@ -45,7 +45,10 @@ nextStep journal dateFormat entryText current = case current of
     AccountQuestion HL.nulltransaction { HL.tdate = day
                                        , HL.tdescription = T.unpack (fromEither entryText)}
   AccountQuestion trans
-    | T.null (fromEither entryText) -> return $ Right $ Step $ FinalQuestion trans
+    | T.null (fromEither entryText) && transactionBalanced trans
+      -> return $ Right $ Step $ FinalQuestion trans
+    | T.null (fromEither entryText)  -- unbalanced
+      -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
       AmountQuestion (T.unpack (fromEither entryText)) trans
   AmountQuestion name trans -> case parseAmount (HL.jContext journal) (fromEither entryText) of

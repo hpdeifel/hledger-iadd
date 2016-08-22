@@ -29,9 +29,8 @@ viewQuestion (AccountQuestion trans) = str $
   "Account " ++ show (numPostings trans + 1)
 viewQuestion (AmountQuestion _ trans) = str $
   "Amount " ++ show (numPostings trans + 1)
-viewQuestion (FinalQuestion trans) = txt $ mconcat $
+viewQuestion (FinalQuestion trans) = txt $
   "Add this transaction to the journal? Y/n"
-  : if HL.isTransactionBalanced Nothing trans then [] else ["\nTransaction not balanced!!!"]
 
 viewContext :: (Ord n, Show n) => List n Text -> Widget n
 viewContext = renderList renderItem True
