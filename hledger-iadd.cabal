@@ -43,7 +43,6 @@ executable hledger-iadd
                      , optparse-applicative
                      , directory
                      , text-format
-                     , htoml
                      , xdg-basedir
                      , unordered-containers
                      , free >= 4.12.4
