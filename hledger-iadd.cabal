@@ -33,7 +33,7 @@ executable hledger-iadd
                      , brick >= 0.7
                      , vty >= 5.4
                      , text
-                     , lens
+                     , microlens
                      , text-zipper
                      , transformers >= 0.3
                      , time >= 1.5
@@ -64,7 +64,7 @@ test-suite spec
                     , brick >= 0.7
                     , vty >= 5.4
                     , text
-                    , lens
+                    , microlens
                     , text-zipper
                     , transformers >= 0.3
                     , time >= 1.5

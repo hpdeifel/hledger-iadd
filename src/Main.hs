@@ -12,7 +12,6 @@ import           Brick.Widgets.List.Utils
 import           Graphics.Vty hiding (parseConfigFile, parseConfig)
 
 import           Control.Exception
-import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
@@ -26,6 +25,7 @@ import           Data.Text.Zipper
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
+import           Lens.Micro
 import           Options.Applicative hiding (str, option)
 import           System.Directory
 import           System.Environment.XDG.BaseDir

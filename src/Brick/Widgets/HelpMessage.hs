@@ -17,7 +17,7 @@ import Graphics.Vty
 import Data.Text (Text)
 import Data.Monoid
 import Data.List
-import Control.Lens
+import Lens.Micro
 
 type Title = Text
 

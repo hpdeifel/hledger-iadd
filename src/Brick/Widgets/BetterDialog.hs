@@ -6,7 +6,7 @@ import Brick
 import Brick.Widgets.Border
 import Graphics.Vty
 import Data.Text (Text)
-import Control.Lens
+import Lens.Micro
 
 dialog :: Text -> Text -> Widget n
 dialog title = center . dialog' title
