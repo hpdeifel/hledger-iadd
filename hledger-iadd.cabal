@@ -39,7 +39,6 @@ executable hledger-iadd
                      , time >= 1.5
                      , vector
                      , parsec
-                     , containers >= 0.5
                      , optparse-applicative
                      , directory
                      , text-format
@@ -70,7 +69,6 @@ test-suite spec
                     , time >= 1.5
                     , vector
                     , parsec
-                    , containers >= 0.5
                     , hspec
                     , QuickCheck
                     , text-format

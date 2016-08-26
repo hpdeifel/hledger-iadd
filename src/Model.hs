@@ -11,7 +11,7 @@ module Model
 
 import           Data.Function
 import           Data.List
-import qualified Data.Map as M
+import qualified Data.HashMap.Lazy as HM
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Ord (Down(..))
@@ -173,12 +173,12 @@ negativeAmountSum trans =
 -- | Compare two transaction descriptions based on their number of occurences in
 -- the given journal.
 descUses :: HL.Journal -> Text -> Text -> Ordering
-descUses journal = compare `on` (Down . flip M.lookup usesMap)
-  where usesMap = foldr (count . T.pack . HL.tdescription) M.empty $
+descUses journal = compare `on` (Down . flip HM.lookup usesMap)
+  where usesMap = foldr (count . T.pack . HL.tdescription) HM.empty $
                   HL.jtxns journal
         -- Add one to the current count of this element
-        count :: Text -> M.Map Text (Sum Int) -> M.Map Text (Sum Int)
-        count = M.alter (<> Just 1)
+        count :: Text -> HM.HashMap Text (Sum Int) -> HM.HashMap Text (Sum Int)
+        count = HM.alter (<> Just 1)
 
 fromEither :: Either a a -> a
 fromEither = either id id
