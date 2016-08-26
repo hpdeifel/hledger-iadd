@@ -85,10 +85,12 @@ instance OptionArgument Integer where
 
 instance OptionArgument String where
   mkParser = ("string",  many anyChar)
+  -- TODO Escaping
   printArgument = T.pack . quote
 
 instance OptionArgument Text where
   mkParser = ("string",  T.pack <$> many anyChar)
+  -- TODO Escaping
   printArgument = quote
 
 quote :: (IsString a, Monoid a) => a -> a

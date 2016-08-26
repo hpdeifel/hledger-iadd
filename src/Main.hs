@@ -253,12 +253,15 @@ configPath = getUserConfigFile "hledger-iadd" "config.conf"
 data Options = Options
   { optLedgerFile :: FilePath
   , optDateFormat :: String
+  , optDumpConfig :: Bool
   }
 
 confParser :: FilePath -> OptParser Options
 confParser home = Options
+  -- TODO Convert leading tilde to home
   <$> option "file" (ledgerPath home) "Path to the journal file"
   <*> option "date-format" "[[%y/]%m/]%d" "Format used to parse dates"
+  <*> pure False
 
 parseConfigFile :: IO Options
 parseConfigFile = do
@@ -288,6 +291,10 @@ optionParser def = Options
         <> value (optDateFormat def)
         <> help "Format used to parse dates"
         )
+  <*> switch
+        ( long "dump-default-config"
+       <> help "Print an example configuration file to stderr and exit"
+        )
 
 main :: IO ()
 main = do
@@ -295,6 +302,13 @@ main = do
 
   opts <- execParser $ info (helper <*> optionParser opts1) $
             fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+
+  when (optDumpConfig opts) $ do
+    home <- getHomeDirectory
+    path <- configPath
+    T.putStrLn $ "# Write this to " <> T.pack path <> "\n"
+    T.putStrLn (parserExample $ confParser home)
+    exitSuccess
 
   date <- case parseDateFormat (T.pack $ optDateFormat opts) of
     Left err -> do
