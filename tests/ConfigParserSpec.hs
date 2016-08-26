@@ -9,11 +9,12 @@ import qualified Data.Text as T
 import           ConfigParser
 
 spec :: Spec
-spec = describe "config parser" $ do
+spec = do
   fullTest
   defaultTest
   syntaxTests
   valueTests
+  commentTests
 
 data TestData = TestData
   { someInt :: Int
@@ -151,6 +152,42 @@ valueTests = do
   context "given strings" $
     it "parses the empty string quoted" $
       parseConfig "" "someString = \"\"" testParser `shouldBe` Right defaultData { someString = "" }
+
+commentTests :: Spec
+commentTests = do
+  it "handles a file with just comments" $
+    parseConfig "" "# a comment \n  #another comment  " testParser
+      `shouldBe` Right defaultData
+
+  it "handles comments and whitespace in front" $
+    parseConfig "" "  \n\n#another comment  " testParser
+      `shouldBe` Right defaultData
+
+  it "handles comments and whitespace in front" $
+    parseConfig "" "  \n\n#another comment  " testParser
+      `shouldBe` Right defaultData
+
+  it "handles comments and whitespace after" $
+    parseConfig "" "#another comment\n\n  " testParser
+      `shouldBe` Right defaultData
+
+  it "handles comments with whitespace between" $
+    parseConfig "" "\n \n # comment \n #another comment\n\n  " testParser
+      `shouldBe` Right defaultData
+
+  it "handles comments after assignments" $ do
+    parseConfig "" "someInt = 4# a comment" testParser
+      `shouldBe` Right defaultData { someInt = 4 }
+
+    parseConfig "" "someInt = 4# a comment\n" testParser
+      `shouldBe` Right defaultData { someInt = 4 }
+
+    parseConfig "" "someInt = 4  # a comment" testParser
+      `shouldBe` Right defaultData { someInt = 4 }
+
+  it "handles comments around assignments" $ do
+    parseConfig "" "someInt = 4# a comment\n # a comment\nsomeString = foo # bar" testParser
+      `shouldBe` Right defaultData { someInt = 4, someString = "foo" }
 
 isLeft :: Either a b -> Bool
 isLeft = either (const True) (const False)

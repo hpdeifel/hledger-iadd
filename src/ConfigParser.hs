@@ -31,7 +31,7 @@ import           Text.Parsec.Error
 import           Text.Parsec.Text
 
 parseConfig :: FilePath -> Text -> OptParser a -> Either ConfParseError a
-parseConfig path input parser = case parse assignmentList path input of
+parseConfig path input parser = case parse (assignmentList <* eof) path input of
   Left err -> Left $ SyntaxError err
   Right res -> runOptionParser res parser
 
@@ -122,7 +122,10 @@ assignmentList = whitespace *> many (assignment <* whitespace)
 
 assignment :: Parser Assignment
 assignment = do
-  Assignment <$> (whitespaceNoEOL *> getPosition) <*> key <* spaces <* char '=' <* spaces <*> value
+  Assignment
+    <$> getPosition <*> key <* whitespaceNoComment
+    <*  char '=' <* whitespaceNoComment
+    <*> value
 
 key :: Parser Text
 key = T.pack <$> many1 (alphaNum <|> char '_' <|> char '-')
@@ -145,12 +148,17 @@ escapedString = (T.pack <$> (char '"' *> many escapedChar <* char '"'))
   where escapedChar =  char '\\' *> anyChar
                    <|> noneOf "\""
 
--- TODO Add comments
 whitespace :: Parser ()
-whitespace = skipMany $ oneOf " \t\n"
+whitespace = skipMany $ (void $ oneOf " \t\n") <|> comment
 
 whitespaceNoEOL :: Parser ()
-whitespaceNoEOL = skipMany $ oneOf " \t"
+whitespaceNoEOL = skipMany $ (void $ oneOf " \t") <|> comment
+
+whitespaceNoComment :: Parser ()
+whitespaceNoComment = skipMany $ oneOf " \t"
+
+comment :: Parser ()
+comment = char '#' >> skipMany (noneOf "\n")
 
 parseWithStart :: Stream s Identity t => Parsec s () a -> SourcePos -> s -> Either ParseError a
 parseWithStart p pos = parse p' (sourceName pos)
