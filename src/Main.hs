@@ -257,8 +257,8 @@ data Options = Options
 
 confParser :: FilePath -> OptParser Options
 confParser home = Options
-  <$> option "file" (ledgerPath home)
-  <*> option "date-format" "[[%y/]%m/]%d"
+  <$> option "file" (ledgerPath home) "Path to the journal file"
+  <*> option "date-format" "[[%y/]%m/]%d" "Format used to parse dates"
 
 parseConfigFile :: IO Options
 parseConfigFile = do

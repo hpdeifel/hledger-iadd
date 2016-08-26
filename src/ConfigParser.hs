@@ -12,6 +12,7 @@ module ConfigParser
        , parseConfig
        , parseConfigFile
        , parserDefault
+       , parserExample
        ) where
 
 import           Control.Applicative
@@ -21,11 +22,12 @@ import           Control.Monad
 import           Data.Char
 import           Data.Functor.Identity
 import           Data.Monoid
+import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           Text.Parsec hiding ((<|>), many, option, optional)
 import qualified Text.Parsec as P
+import           Text.Parsec hiding ((<|>), many, option, optional)
 import           Text.Parsec.Char
 import           Text.Parsec.Error
 import           Text.Parsec.Text
@@ -44,7 +46,9 @@ data Option a = Option
   { optParser :: Parser a
   , optType :: Text -- Something like "string" or "integer"
   , optName :: Text
+  , optHelp :: Text
   , optDefault :: a
+  , optDefaultTxt :: Text -- printed version of optDefault
   } deriving (Functor)
 
 type OptParser a = Ap Option a
@@ -62,25 +66,33 @@ instance Show ConfParseError where
 
 class OptionArgument a where
   mkParser :: (Text, Parser a)
+  printArgument :: a -> Text
 
-option :: OptionArgument a => Text -> a -> OptParser a
-option t def = liftAp $ Option parser name t def
-  where (name, parser) = mkParser
+option :: OptionArgument a => Text -> a -> Text -> OptParser a
+option name def help = liftAp $ Option parser typename name help def (printArgument def)
+  where (typename, parser) = mkParser
 
 parseNumber :: Read a => Parser a
 parseNumber = read <$> ((<>) <$> (P.option "" $ string "-") <*> many1 digit)
 
 instance OptionArgument Int where
   mkParser = ("integer", parseNumber)
+  printArgument = T.pack . show
 
 instance OptionArgument Integer where
   mkParser = ("integer", parseNumber)
+  printArgument = T.pack . show
 
 instance OptionArgument String where
   mkParser = ("string",  many anyChar)
+  printArgument = T.pack . quote
 
 instance OptionArgument Text where
   mkParser = ("string",  T.pack <$> many anyChar)
+  printArgument = quote
+
+quote :: (IsString a, Monoid a) => a -> a
+quote x = "\"" <> x <> "\""
 
 runOptionParser :: [Assignment] -> OptParser a -> Either ConfParseError a
 runOptionParser (a:as) parser =  parseOption parser a >>= runOptionParser as
@@ -88,6 +100,11 @@ runOptionParser [] parser = Right $ parserDefault parser
 
 parserDefault :: OptParser a -> a
 parserDefault = runIdentity . runAp (Identity . optDefault)
+
+parserExample :: OptParser a -> Text
+parserExample = T.strip . runAp_ example1
+  where example1 a = commentify (optHelp a) <> optName a <> " = " <> optDefaultTxt a <> "\n\n"
+        commentify = T.unlines . map ("# " <>) . T.lines
 
 parseOption :: OptParser a -> Assignment -> Either ConfParseError (OptParser a)
 parseOption (Pure _) ass =

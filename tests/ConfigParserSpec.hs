@@ -2,7 +2,10 @@
 module ConfigParserSpec (spec) where
 
 import           Test.Hspec
+import           Test.QuickCheck
 
+import           Control.Arrow
+import           Data.Char
 import           Data.Text (Text)
 import qualified Data.Text as T
 
@@ -15,6 +18,7 @@ spec = do
   syntaxTests
   valueTests
   commentTests
+  exampleTests
 
 data TestData = TestData
   { someInt :: Int
@@ -25,10 +29,10 @@ data TestData = TestData
 
 testParser :: OptParser TestData
 testParser = TestData
-  <$> option "someInt" 42
-  <*> option "someInteger" 23
-  <*> option "someString" "foobar"
-  <*> option "someText" "barfoo"
+  <$> option "someInt" 42 "Help for this"
+  <*> option "someInteger" 23 "Help for that"
+  <*> option "someString" "foobar" "Help with\nMultiple lines"
+  <*> option "someText" "barfoo" "And another help"
 
 defaultData :: TestData
 defaultData = parserDefault testParser
@@ -43,9 +47,22 @@ fullTest = it "parses a complete example" $ do
   parseConfig "" inputTxt testParser `shouldBe` Right output
 
 defaultTest :: Spec
-defaultTest = it "fills in the default values" $
-  parseConfig "" "" testParser
-    `shouldBe` Right (TestData 42 23 "foobar" "barfoo")
+defaultTest = do
+  it "fills in the default values" $
+    parseConfig "" "" testParser `shouldBe` Right (TestData 42 23 "foobar" "barfoo")
+
+  it "fills in the default values for random data" $
+    property defaultWorksProp
+
+defaultWorksProp :: TestData -> Property
+defaultWorksProp testData =
+  let parser = TestData
+                 <$> option "someInt" (someInt testData) "Help for this"
+                 <*> option "someInteger" (someInteger testData) "Help for that"
+                 <*> option "someString" (someString testData) "Help with\nMultiple lines"
+                 <*> option "someText" (someText testData) "And another help"
+  in parseConfig "" "" parser === Right testData
+
 
 syntaxTests :: Spec
 syntaxTests = do
@@ -115,19 +132,19 @@ bareStringTests = do
 optionNameTests :: Spec
 optionNameTests = do
   it "allows dashes in option names" $ do
-    let parser = (\x -> defaultData { someInt = x }) <$> option "test-name" 10
+    let parser = (\x -> defaultData { someInt = x }) <$> option "test-name" 10 ""
     parseConfig "" "test-name = 10" parser `shouldBe` Right defaultData { someInt = 10 }
 
   it "allows underscores in option names" $ do
-    let parser = (\x -> defaultData { someInt = x }) <$> option "test_name" 10
+    let parser = (\x -> defaultData { someInt = x }) <$> option "test_name" 10 ""
     parseConfig "" "test_name = 10" parser `shouldBe` Right defaultData { someInt = 10 }
 
   it "doesn't allow spaces in option names" $ do
-    let parser = (\x -> defaultData { someInt = x }) <$> option "test name" 10
+    let parser = (\x -> defaultData { someInt = x }) <$> option "test name" 10 ""
     parseConfig "" "test name = 10" parser `shouldSatisfy` isLeft
 
   it "doesn't allow equal signs in option names" $ do
-    let parser = (\x -> defaultData { someInt = x }) <$> option "test=foo" 10
+    let parser = (\x -> defaultData { someInt = x }) <$> option "test=foo" 10 ""
     parseConfig "" "test=foo = 10" parser `shouldSatisfy` isLeft
 
 valueTests :: Spec
@@ -189,5 +206,45 @@ commentTests = do
     parseConfig "" "someInt = 4# a comment\n # a comment\nsomeString = foo # bar" testParser
       `shouldBe` Right defaultData { someInt = 4, someString = "foo" }
 
+
+exampleTests :: Spec
+exampleTests = describe "parserExample" $ do
+  it "works for one example" $
+    let output = T.strip $ T.unlines
+          [ "# Help for this"
+          , "someInt = 42"
+          , ""
+          , "# Help for that"
+          , "someInteger = 23"
+          , ""
+          , "# Help with"
+          , "# Multiple lines"
+          , "someString = \"foobar\""
+          , ""
+          , "# And another help"
+          , "someText = \"barfoo\""
+          ]
+    in parserExample testParser `shouldBe` output
+
+  it "can parse it's own example output" $
+    property exampleParseableProp
+
+exampleParseableProp :: TestData -> Property
+exampleParseableProp testData =
+  let parser = TestData <$> option "someInt" (someInt testData) "help"
+                        <*> option "someInteger" (someInteger testData) "help"
+                        <*> option "someString" (someString testData) "help"
+                        <*> option "someText" (someText testData) "help"
+  in parseConfig "" (parserExample parser) parser === Right testData
+
 isLeft :: Either a b -> Bool
 isLeft = either (const True) (const False)
+
+isAsciiAlnum :: Char -> Bool
+isAsciiAlnum = uncurry (&&) . (isAscii &&& isAlphaNum)
+
+instance Arbitrary TestData where
+  arbitrary = TestData <$> arbitrary <*> arbitrary <*> (arbitrary `suchThat` all isAsciiAlnum) <*> arbitrary
+
+instance Arbitrary Text where
+  arbitrary = T.pack <$> (arbitrary `suchThat` all isAsciiAlnum)
