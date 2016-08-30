@@ -119,7 +119,23 @@ The following keyboard shortcuts are available:
 | <kbd>C-p</kbd>,<kbd>↑</kbd>     | Select the previous context item                                              |
 | <kbd>F1</kbd>,<kbd>Alt-?</kbd>  | Show help dialog                                                              |
 
+## Configuration File
 
+`hledger-iadd` is optionally configurable through a configuration file
+in `${XDG_CONFIG_HOME}/hledger-iadd/config.conf`. This file consists
+of simple
+
+    key = value
+
+assignments on individual lines with whitespace or comments starting
+with `#` between them. The default config can be obtained by
+passing `--dump-default-config` to `hledger-iadd`.
+
+The following options are currently available:
+
+  - `file`: Path to the journal file.
+  - `data-format`: The date format. See the documentation for
+    `--date-format` for details.
 
 
 [stack]: https://github.com/commercialhaskell/stack
