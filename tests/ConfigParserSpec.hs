@@ -244,7 +244,7 @@ isAsciiAlnum :: Char -> Bool
 isAsciiAlnum = uncurry (&&) . (isAscii &&& isAlphaNum)
 
 instance Arbitrary TestData where
-  arbitrary = TestData <$> arbitrary <*> arbitrary <*> (arbitrary `suchThat` all isAsciiAlnum) <*> arbitrary
+  arbitrary = TestData <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary Text where
-  arbitrary = T.pack <$> (arbitrary `suchThat` all isAsciiAlnum)
+  arbitrary = T.pack <$> arbitrary

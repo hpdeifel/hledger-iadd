@@ -85,16 +85,16 @@ instance OptionArgument Integer where
 
 instance OptionArgument String where
   mkParser = ("string",  many anyChar)
-  -- TODO Escaping
-  printArgument = T.pack . quote
+  printArgument = quote . T.pack
 
 instance OptionArgument Text where
   mkParser = ("string",  T.pack <$> many anyChar)
-  -- TODO Escaping
   printArgument = quote
 
-quote :: (IsString a, Monoid a) => a -> a
-quote x = "\"" <> x <> "\""
+quote :: Text -> Text
+quote x = "\"" <> escape x <> "\""
+  where
+    escape = T.replace "\"" "\\\"" . T.replace "\\" "\\\\"
 
 runOptionParser :: [Assignment] -> OptParser a -> Either ConfParseError a
 runOptionParser (a:as) parser =  parseOption parser a >>= runOptionParser as
@@ -160,7 +160,6 @@ bareString :: Parser Text
 bareString = (T.strip . T.pack <$> many1 (noneOf "#\n"))
   <?> "bare string"
 
--- TODO Support unicode escaping ala haskell style
 escapedString :: Parser Text
 escapedString = (T.pack <$> (char '"' *> many escapedChar <* char '"'))
                 <?> "quoted string"
