@@ -4,15 +4,41 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs, DeriveFunctor, ScopedTypeVariables #-}
 
+-- | Applicative config parser.
+--
+-- This parses config files in the style of optparse-applicative. It supports
+-- automatic generation of a default config both as datatype and in printed
+-- form.
+--
+-- Example:
+--
+-- @
+-- data Config = Config
+--   { test :: Text
+--   , foobar :: Int
+--   }
+--
+-- confParser :: ConfParser Config
+-- confParser = Config
+--          \<$\> option "test" "default value" "Help for test"
+--          \<*\> option "foobar" 42 "Help for foobar"
+-- @
+--
+-- This parses a config file like the following:
+--
+-- > # This is a comment
+-- > test = "something"
+-- > foobar = 23
 module ConfigParser
-       ( Option
-       , option
-       , ConfParseError
-       , OptParser
+       ( OptParser
        , parseConfig
        , parseConfigFile
+       , option
        , parserDefault
        , parserExample
+       , ConfParseError
+       , Option
+       , OptionArgument()
        ) where
 
 import           Control.Applicative
@@ -32,16 +58,24 @@ import           Text.Parsec.Char
 import           Text.Parsec.Error
 import           Text.Parsec.Text
 
-parseConfig :: FilePath -> Text -> OptParser a -> Either ConfParseError a
+-- | Parse a config file from a 'Text'.
+parseConfig :: FilePath -- ^ File path to use in error messages
+            -> Text -- ^ The input test
+            -> OptParser a -- ^ The parser to use
+            -> Either ConfParseError a
 parseConfig path input parser = case parse (assignmentList <* eof) path input of
   Left err -> Left $ SyntaxError err
   Right res -> runOptionParser res parser
 
-parseConfigFile :: FilePath -> OptParser a -> IO (Either ConfParseError a)
+-- | Parse a config file from an actual file in the filesystem.
+parseConfigFile :: FilePath -- ^ Path to the file
+                -> OptParser a -- ^ The parser to use
+                -> IO (Either ConfParseError a)
 parseConfigFile path parser = do
   input <- T.readFile path
   return $ parseConfig path input parser
 
+-- | An option in the config file. Use 'option' as a smart constructor.
 data Option a = Option
   { optParser :: Parser a
   , optType :: Text -- Something like "string" or "integer"
@@ -51,8 +85,10 @@ data Option a = Option
   , optDefaultTxt :: Text -- printed version of optDefault
   } deriving (Functor)
 
+-- | The main parser type. Use 'option' and the 'Applicative' instance to create those.
 type OptParser a = Ap Option a
 
+-- | Errors that can occur during parsing. Use the 'Show' instance for printing.
 data ConfParseError = SyntaxError ParseError
                     | UnknownOption SourcePos Text
                     | TypeError ParseError
@@ -64,16 +100,26 @@ instance Show ConfParseError where
     show pos ++ ": Unknown option " ++ T.unpack key
   show (TypeError e) = show e
 
+-- | Class for supported option types.
+--
+-- At the moment, orphan instances are not supported
 class OptionArgument a where
   mkParser :: (Text, Parser a)
   printArgument :: a -> Text
 
-option :: OptionArgument a => Text -> a -> Text -> OptParser a
+-- | 'OptParser' that parses one option.
+--
+-- Can be combined with the 'Applicative' instance for 'OptParser'. See the
+-- module documentation for an example.
+option :: OptionArgument a
+       => Text -- ^ The option name
+       -> a -- ^ The default value
+       -> Text
+          -- ^ A help string for the option. Will be used by 'parserExample' to
+          -- create helpful comments.
+       -> OptParser a
 option name def help = liftAp $ Option parser typename name help def (printArgument def)
   where (typename, parser) = mkParser
-
-parseNumber :: Read a => Parser a
-parseNumber = read <$> ((<>) <$> (P.option "" $ string "-") <*> many1 digit)
 
 instance OptionArgument Int where
   mkParser = ("integer", parseNumber)
@@ -100,9 +146,22 @@ runOptionParser :: [Assignment] -> OptParser a -> Either ConfParseError a
 runOptionParser (a:as) parser =  parseOption parser a >>= runOptionParser as
 runOptionParser [] parser = Right $ parserDefault parser
 
+-- | Returns the default value of a given parser.
+--
+-- This default value is computed from the default arguments of the 'option'
+-- constructor. For the parser from the module description, the default value
+-- would be:
+--
+-- > Config { test = "default value"
+-- >        , foobar :: 42
+-- >        }
 parserDefault :: OptParser a -> a
 parserDefault = runIdentity . runAp (Identity . optDefault)
 
+-- | Generate the default config file.
+--
+-- This returns a valid config file, filled with the default values of every
+-- option and using the help string of these options as comments.
 parserExample :: OptParser a -> Text
 parserExample = T.strip . runAp_ example1
   where example1 a = commentify (optHelp a) <> optName a <> " = " <> optDefaultTxt a <> "\n\n"
@@ -181,3 +240,6 @@ comment = char '#' >> skipMany (noneOf "\n")
 parseWithStart :: Stream s Identity t => Parsec s () a -> SourcePos -> s -> Either ParseError a
 parseWithStart p pos = parse p' (sourceName pos)
   where p' = do setPosition pos; p
+
+parseNumber :: Read a => Parser a
+parseNumber = read <$> ((<>) <$> (P.option "" $ string "-") <*> many1 digit)
