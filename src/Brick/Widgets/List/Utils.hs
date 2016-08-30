@@ -1,9 +1,9 @@
 module Brick.Widgets.List.Utils where
 
-import Brick.Widgets.List
-import Control.Lens
+import           Brick.Widgets.List
+import           Data.Maybe
 import qualified Data.Vector as V
-import Data.Maybe
+import           Lens.Micro
 
 -- | Replace the contents of a list with a new set of elements but preserve the
 -- currently selected index.

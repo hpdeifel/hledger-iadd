@@ -23,28 +23,28 @@ executable hledger-iadd
                      , View
                      , AmountParser
                      , DateParser
+                     , ConfigParser
                      , Brick.Widgets.List.Utils
                      , Brick.Widgets.HelpMessage
                      , Brick.Widgets.BetterDialog
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 4.8 && < 5
                      , hledger-lib >= 0.27 && < 0.28
                      , brick >= 0.7
                      , vty >= 5.4
                      , text
-                     , lens
+                     , microlens
                      , text-zipper
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
                      , parsec
-                     , containers >= 0.5
                      , optparse-applicative
                      , directory
                      , text-format
-                     , htoml
                      , xdg-basedir
                      , unordered-containers
+                     , free >= 4.12.4
 
   ghc-options:         -threaded
 
@@ -55,20 +55,22 @@ test-suite spec
   main-is:            Spec.hs
   other-modules:      DateParser
                     , DateParserSpec
+                    , ConfigParser
+                    , ConfigParserSpec
   default-language:   Haskell2010
-  build-depends:      base >= 4.7 && < 5
+  build-depends:      base >= 4.8 && < 5
                     , hledger-lib >= 0.27 && < 0.28
                     , brick >= 0.7
                     , vty >= 5.4
                     , text
-                    , lens
+                    , microlens
                     , text-zipper
                     , transformers >= 0.3
                     , time >= 1.5
                     , vector
                     , parsec
-                    , containers >= 0.5
                     , hspec
                     , QuickCheck
                     , text-format
+                    , free >= 4.12.4
   ghc-options:        -threaded

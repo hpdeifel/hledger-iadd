@@ -9,10 +9,9 @@ import           Brick.Widgets.BetterDialog
 import           Brick.Widgets.Edit
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
-import           Graphics.Vty hiding (parseConfigFile)
+import           Graphics.Vty hiding (parseConfigFile, parseConfig)
 
 import           Control.Exception
-import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
@@ -26,16 +25,16 @@ import           Data.Text.Zipper
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
-import           Options.Applicative hiding (str)
+import           Lens.Micro
+import           Options.Applicative hiding (str, option)
 import           System.Directory
 import           System.Environment.XDG.BaseDir
 import           System.Exit
 import           System.IO
-import           Text.Toml
-import qualified Text.Toml.Types as TOML
 
 import           Brick.Widgets.HelpMessage
 import           DateParser
+import           ConfigParser hiding (parseConfigFile)
 import           Model
 import           View
 
@@ -254,30 +253,28 @@ configPath = getUserConfigFile "hledger-iadd" "config.conf"
 data Options = Options
   { optLedgerFile :: FilePath
   , optDateFormat :: String
+  , optDumpConfig :: Bool
   }
 
-defaultOptions :: FilePath -> Options
-defaultOptions home = Options (ledgerPath home) "[[%y/]%m/]%d"
+confParser :: FilePath -> OptParser Options
+confParser home = Options
+  -- TODO Convert leading tilde to home
+  <$> option "file" (ledgerPath home) "Path to the journal file"
+  <*> option "date-format" "[[%y/]%m/]%d" "Format used to parse dates"
+  <*> pure False
 
-nodeToStr :: TOML.Node -> Maybe String
-nodeToStr (TOML.VString t) = Just $ T.unpack t
-nodeToStr _ = Nothing
-
-parseConfigFile :: Options -> IO Options
-parseConfigFile def = do
+parseConfigFile :: IO Options
+parseConfigFile = do
   path <- configPath
+  home <- getHomeDirectory
+
   try (T.readFile path) >>= \case
-    Left (_ :: SomeException) -> return def
-    Right res -> case parseTomlDoc path res of
+    Left (_ :: SomeException) -> return (parserDefault $ confParser home)
+    Right res -> case parseConfig path res (confParser home) of
       Left err -> do
         print err
         exitFailure
-      Right table -> return $ Options
-        { optLedgerFile = fromMaybe (optLedgerFile def) $
-                          HM.lookup "file" table >>= nodeToStr
-        , optDateFormat = fromMaybe (optDateFormat def) $
-                          HM.lookup "date-format" table >>= nodeToStr
-        }
+      Right res' -> return res'
 
 optionParser :: Options -> Parser Options
 optionParser def = Options
@@ -294,15 +291,24 @@ optionParser def = Options
         <> value (optDateFormat def)
         <> help "Format used to parse dates"
         )
+  <*> switch
+        ( long "dump-default-config"
+       <> help "Print an example configuration file to stderr and exit"
+        )
 
 main :: IO ()
 main = do
-  home <- getHomeDirectory
-
-  opts1 <- parseConfigFile (defaultOptions home)
+  opts1 <- parseConfigFile
 
   opts <- execParser $ info (helper <*> optionParser opts1) $
             fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+
+  when (optDumpConfig opts) $ do
+    home <- getHomeDirectory
+    path <- configPath
+    T.putStrLn $ "# Write this to " <> T.pack path <> "\n"
+    T.putStrLn (parserExample $ confParser home)
+    exitSuccess
 
   date <- case parseDateFormat (T.pack $ optDateFormat opts) of
     Left err -> do
