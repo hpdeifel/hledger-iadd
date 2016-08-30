@@ -293,7 +293,7 @@ optionParser def = Options
         )
   <*> switch
         ( long "dump-default-config"
-       <> help "Print an example configuration file to stderr and exit"
+       <> help "Print an example configuration file to stdout and exit"
         )
 
 main :: IO ()
