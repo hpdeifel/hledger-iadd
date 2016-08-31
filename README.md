@@ -134,7 +134,7 @@ passing `--dump-default-config` to `hledger-iadd`.
 The following options are currently available:
 
   - `file`: Path to the journal file.
-  - `data-format`: The date format. See the documentation for
+  - `date-format`: The date format. See the documentation for
     `--date-format` for details.
 
 
