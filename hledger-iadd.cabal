@@ -74,7 +74,7 @@ executable hledger-iadd
 
 test-suite spec
   type:               exitcode-stdio-1.0
-  hs-source-dirs:     tests, src
+  hs-source-dirs:     tests
   main-is:            Spec.hs
   other-modules:      DateParserSpec
                     , ConfigParserSpec
