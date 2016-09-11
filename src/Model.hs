@@ -114,7 +114,22 @@ matches :: Text -> Text -> Bool
 matches a b
   | T.null a = False
   | otherwise = matches' (T.toCaseFold a) (T.toCaseFold b)
-  where matches' a' b' = all (`T.isInfixOf` b') (T.words a')
+  where
+    matches' a' b'
+      | T.any (== ':') b' = all (`fuzzyMatch` (T.splitOn ":" b')) (T.words a')
+      | otherwise = all (`T.isInfixOf` b') (T.words a')
+
+fuzzyMatch :: Text -> [Text] -> Bool
+fuzzyMatch _ [] = False
+fuzzyMatch query (part : partsRest) = case (T.uncons query) of
+  Nothing -> True
+  Just (c, queryRest)
+    | c == ':' -> fuzzyMatch queryRest partsRest
+    | otherwise -> fuzzyMatch query partsRest || case (T.uncons part) of
+      Nothing -> False
+      Just (c2, partRest)
+        | c == c2 -> fuzzyMatch queryRest (partRest : partsRest)
+        | otherwise -> False
 
 post' :: HL.AccountName -> HL.MixedAmount -> HL.Posting
 post' account amount = HL.nullposting { HL.paccount = account
