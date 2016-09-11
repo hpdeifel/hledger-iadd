@@ -241,7 +241,7 @@ setEdit content edit = edit & editContentsL .~ zipper
   where zipper = gotoEOL (stringZipper [T.unpack content] (Just 1))
 
 addToJournal :: HL.Transaction -> FilePath -> IO ()
-addToJournal trans path = appendFile path (show trans)
+addToJournal trans path = appendFile path (HL.showTransaction trans)
 
 
 ledgerPath :: FilePath -> FilePath
