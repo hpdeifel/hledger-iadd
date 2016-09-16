@@ -70,7 +70,7 @@ undo current = case current of
   DescriptionQuestion _ -> return DateQuestion
   AccountQuestion trans -> return $ case HL.tpostings trans of
     []     -> DescriptionQuestion (HL.tdate trans)
-    (p:ps) -> AmountQuestion (HL.paccount p) trans { HL.tpostings = ps }
+    ps -> AmountQuestion (HL.paccount (last ps)) trans { HL.tpostings = init ps }
   AmountQuestion _ trans -> Right $ AccountQuestion trans
   FinalQuestion trans -> undo (AccountQuestion trans)
 
