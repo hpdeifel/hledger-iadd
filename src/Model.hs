@@ -122,7 +122,7 @@ post' account amount = HL.nullposting { HL.paccount = account
                                       }
 
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
-addPosting p t = t { HL.tpostings = p : HL.tpostings t }
+addPosting p t = t { HL.tpostings = (HL.tpostings t) ++ [p] }
 
 trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
 trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
