@@ -3,5 +3,6 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.7
-resolver: lts-6.1
+- brick-0.9
+- text-zipper-0.7.1
+resolver: lts-6.17

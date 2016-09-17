@@ -39,7 +39,7 @@ import           Model
 import           View
 
 data AppState = AppState
-  { asEditor :: Editor Name
+  { asEditor :: Editor Text Name
   , asStep :: Step
   , asJournal :: HL.Journal
   , asContext :: List Name Text
@@ -169,7 +169,7 @@ setContext as = do
   return as { asContext = ctx }
 
 editText :: AppState -> Text
-editText = T.pack . concat . getEditContents . asEditor
+editText = T.concat . getEditContents . asEditor
 
 doNextStep :: Bool -> AppState -> IO AppState
 doNextStep useSelected as = do
@@ -233,12 +233,12 @@ attrs = attrMap defAttr
   , (helpAttr <> "title", fg green)
   ]
 
-clearEdit :: Editor n -> Editor n
+clearEdit :: Editor Text n -> Editor Text n
 clearEdit = setEdit ""
 
-setEdit :: Text -> Editor n -> Editor n
+setEdit :: Text -> Editor Text n -> Editor Text n
 setEdit content edit = edit & editContentsL .~ zipper
-  where zipper = gotoEOL (stringZipper [T.unpack content] (Just 1))
+  where zipper = gotoEOL (textZipper [content] (Just 1))
 
 addToJournal :: HL.Transaction -> FilePath -> IO ()
 addToJournal trans path = appendFile path (HL.showTransaction trans)
@@ -323,7 +323,7 @@ main = do
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
     Left err -> hPutStrLn stderr err >> exitFailure
     Right journal -> do
-      let edit = editor EditorName (str . concat) (Just 1) ""
+      let edit = editor EditorName (txt . T.concat) (Just 1) ""
 
       sugg <- suggest journal date DateQuestion
 
