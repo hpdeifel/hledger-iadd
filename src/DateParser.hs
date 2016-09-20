@@ -99,7 +99,7 @@ parseDateWithToday spec text = do
 parseDate :: Day -> DateFormat -> Text -> Either Text Day
 parseDate current (DateFormat spec) text =
   let en = Just <$> parseEnglish current
-      num = completeDate current . fmap getFirst <$> parseDate' spec <* eof
+      num = completeRecentDate current . fmap getFirst <$> parseDate' spec <* eof
 
   in case parse ((try en <|> num) <* eof) "date" text of
     Left err -> Left $ T.pack $ show err
@@ -110,12 +110,41 @@ parseDate current (DateFormat spec) text =
 newtype IncompleteDate a = IDate (a, a, a)
                        deriving (Monoid, Functor, Show)
 
-completeDate :: Day  -> IncompleteDate (Maybe Int)-> Maybe Day
+-- complete a date by filling the undefined fields with the current date's fields
+completeDate :: Day  -> IncompleteDate (Maybe Int) -> Maybe Day
 completeDate current (IDate (y,m,d)) =
   let (currentYear, currentMonth, currentDay) = toGregorian current
   in fromGregorianValid (fromMaybe currentYear (toInteger <$> y))
                         (fromMaybe currentMonth m)
                         (fromMaybe currentDay d)
+
+-- find a date in the past as recent as possible that matches the incomplete date
+completeRecentDate :: Day  -> IncompleteDate (Maybe Int) -> Maybe Day
+completeRecentDate current (IDate (i_y,i_m,i_d)) =
+  let
+    (currentYear, currentMonth, currentDay) = toGregorian current
+    singleton a = [a]
+    year =
+      -- every date occours at least once in 8 years
+      -- That is because the years divisible by 100 but not by 400 are no leap
+      -- years.
+      fromMaybe (reverse [currentYear-8..currentYear]) (singleton <$> toInteger <$> i_y)
+    month = fromMaybe (reverse [currentMonth-11..currentMonth]) (singleton <$> i_m)
+    day = fromMaybe (reverse [currentDay-31..currentDay]) (singleton <$> i_d)
+    normalize :: Integral a => Integral b => a -> a -> b -> (a,b)
+    normalize c x y = -- there are c many x per y; x is 1-indexed
+      if (x >= 1) then (x,y) else normalize c (x + c) (y - 1)
+  in listToMaybe $ do
+    y <- year
+    m <- month
+    d <- day
+    let (d',m') = normalize 31 d m
+    let (m'',y') = normalize 12 m' y
+    completed <- maybeToList (fromGregorianValid y' m'' d')
+    if (completed `diffDays` current > 0)
+    then fail "Completed day in the future."
+    else return completed
+
 
 parseDate' :: [DateSpec] -> Parser (IncompleteDate (First Int))
 parseDate' [] = return mempty

@@ -18,6 +18,7 @@ spec :: Spec
 spec = do
   dateFormatTests
   dateTests
+  dateCompletionTests
   printTests
 
 dateFormatTests :: Spec
@@ -36,6 +37,33 @@ dateTests = describe "date parser" $ do
 
     it "is always smaller than the current date" $ property
       weekDaySmallerProp
+
+dateCompletionTests :: Spec
+dateCompletionTests = describe "date completion" $ do
+  it "skips to previous month" $
+    parseGerman 2016 9 20 "21" `shouldBe` Right (fromGregorian 2016 08 21)
+
+  it "stays in month if possible" $
+    parseGerman 2016 8 30 "21" `shouldBe` Right (fromGregorian 2016 08 21)
+
+  it "skips to previous month to reach the 31st" $
+    parseGerman 2016 8 30 "31" `shouldBe` Right (fromGregorian 2016 07 31)
+
+  it "skips to an earlier month to reach the 31st" $
+    parseGerman 2016 7 30 "31" `shouldBe` Right (fromGregorian 2016 05 31)
+
+  it "skips to the previous year if necessary" $
+    parseGerman 2016 9 30 "2.12." `shouldBe` Right (fromGregorian 2015 12 2)
+
+  it "skips to the previous years if after a leap year" $
+    parseGerman 2017 3 10 "29.2" `shouldBe` Right (fromGregorian 2016 02 29)
+
+  it "even might skip to a leap year 8 years ago" $
+    parseGerman 2104 2 27 "29.2" `shouldBe` Right (fromGregorian 2096 02 29)
+
+  where
+    parseGerman :: Integer -> Int -> Int -> String -> Either Text Day
+    parseGerman y m d str = parseDate (fromGregorian y m d)  german (T.pack str)
 
 printTests :: Spec
 printTests = describe "date printer" $ do
