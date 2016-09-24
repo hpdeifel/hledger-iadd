@@ -80,10 +80,10 @@ The UI is partitioned in 4 regions:
 	Question: [ text area                             ]
 	---------------------------------------------------
 	Context information (e.g. list of accounts)
-    
-    
-    
-    
+
+
+
+
 	---------------------------------------------------
 	Message area
 
@@ -118,6 +118,18 @@ The following keyboard shortcuts are available:
 | <kbd>C-n</kbd>,<kbd>↓</kbd>     | Select the next context item                                                  |
 | <kbd>C-p</kbd>,<kbd>↑</kbd>     | Select the previous context item                                              |
 | <kbd>F1</kbd>,<kbd>Alt-?</kbd>  | Show help dialog                                                              |
+
+## Default Currency
+
+To make entry easier it is recommended that you set a [default commodity](http://hledger.org/manual.html#default-commodity)
+in your ledger file if you haven't already done so.
+That way when entering amounts, `hledger-iadd` will add the symbols for you.
+You can do this by adding a line like below to the top of your ledger file:
+
+```lisp
+; sets the default commodity symbol and placement, thousands separator, and decimal symbol
+D $1,000.00
+```
 
 ## Configuration File
 
