@@ -51,7 +51,7 @@ nextStep journal dateFormat entryText current = case current of
       -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
       AmountQuestion (T.unpack (fromEither entryText)) trans
-  AmountQuestion name trans -> case parseAmount (HL.jContext journal) (fromEither entryText) of
+  AmountQuestion name trans -> case parseAmountWithDefault (HL.jContext journal) (fromEither entryText) of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
       let newPosting = post' name amount
@@ -125,7 +125,7 @@ addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = (HL.tpostings t) ++ [p] }
 
 trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
-trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
+trySumAmount ctx = either (const Nothing) Just . parseAmountWithDefault ctx
 
 
 -- | Given a previous similar transaction, suggest the next posting to enter
