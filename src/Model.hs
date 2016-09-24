@@ -98,7 +98,7 @@ suggest _ _ (DescriptionQuestion _) = return Nothing
 suggest journal _ (AccountQuestion trans) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
-    else T.pack . HL.paccount <$> (suggestNextPosting trans =<< findLastSimilar journal trans)
+    else T.pack . HL.paccount <$> (suggestAccountPosting journal trans)
 suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
   if transactionBalanced trans
     then HL.pamount <$> (findPostingByAcc account =<< findLastSimilar journal trans)
@@ -142,10 +142,32 @@ suggestNextPosting current reference =
         -- Sort descending by amount. This way, negative amounts rank last
         cmpPosting = compare `on` (Down . HL.pamount)
 
+-- | Given the last transaction entered, suggest the likely most comparable posting
+--
+-- Since the transaction isn't necessarily the same type, we can't rely on matching the data
+-- so we must use the order. This way if the user typically uses a certain order
+-- like expense category and then payment method. Useful if entering many similar postings
+-- in a row. For example, when entering transactions from a credit card statement
+-- where the first account is usually food, and the second posting is always the credit card.
+suggestCorrespondingPosting :: HL.Transaction -> HL.Transaction -> Maybe HL.Posting
+suggestCorrespondingPosting current reference =
+  let postingsEntered = length curPostings in
+  if postingsEntered < (length refPostings) then
+    Just (refPostings !! postingsEntered)
+  else
+    suggestNextPosting current reference
+  where [refPostings, curPostings] = map HL.tpostings [reference, current]
+
 findLastSimilar :: HL.Journal -> HL.Transaction -> Maybe HL.Transaction
 findLastSimilar journal desc =
   maximumBy (compare `on` HL.tdate) <$>
     listToMaybe' (filter (((==) `on` (T.pack . HL.tdescription)) desc) $ HL.jtxns journal)
+
+suggestAccountPosting :: HL.Journal -> HL.Transaction -> Maybe HL.Posting
+suggestAccountPosting journal trans =
+  case findLastSimilar journal trans of
+    Just t -> suggestNextPosting trans t
+    Nothing -> (last <$> listToMaybe' (HL.jtxns journal)) >>= (suggestCorrespondingPosting trans)
 
 -- | Return the first Posting that matches the given account name in the transaction
 findPostingByAcc :: HL.AccountName -> HL.Transaction -> Maybe HL.Posting
