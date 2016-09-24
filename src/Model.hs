@@ -35,8 +35,8 @@ data MaybeStep = Finished HL.Transaction
                | Step Step
                deriving (Eq, Show)
 
-nextStep :: HL.Journal -> DateFormat -> Either Text Text -> Step -> IO (Either Text MaybeStep)
-nextStep journal dateFormat entryText current = case current of
+nextStep :: HL.Journal -> DateFormat -> String -> Either Text Text -> Step -> IO (Either Text MaybeStep)
+nextStep journal dateFormat defaultCurrency entryText current = case current of
   DateQuestion ->
     fmap (Step . DescriptionQuestion) <$> either (parseDateWithToday dateFormat)
                                                  parseHLDateWithToday
@@ -51,7 +51,7 @@ nextStep journal dateFormat entryText current = case current of
       -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
       AmountQuestion (T.unpack (fromEither entryText)) trans
-  AmountQuestion name trans -> case parseAmount (HL.jContext journal) (fromEither entryText) of
+  AmountQuestion name trans -> case parseAmountWithDefault (HL.jContext journal) defaultCurrency (fromEither entryText) of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
       let newPosting = post' name amount
@@ -74,19 +74,19 @@ undo current = case current of
   AmountQuestion _ trans -> Right $ AccountQuestion trans
   FinalQuestion trans -> undo (AccountQuestion trans)
 
-context :: HL.Journal -> DateFormat -> Text -> Step -> IO [Text]
-context _ dateFormat entryText DateQuestion = parseDateWithToday dateFormat entryText >>= \case
+context :: HL.Journal -> DateFormat -> String -> Text -> Step -> IO [Text]
+context _ dateFormat _ entryText DateQuestion = parseDateWithToday dateFormat entryText >>= \case
   Left _ -> return []
   Right date -> return [T.pack $ HL.showDate date]
-context j _ entryText (DescriptionQuestion _) = return $
+context j _ _ entryText (DescriptionQuestion _) = return $
   let descs = map T.pack $ HL.journalDescriptions j
   in sortBy (descUses j) $ filter (entryText `matches`) descs
-context j _ entryText (AccountQuestion _) = return $
+context j _ _ entryText (AccountQuestion _) = return $
   let names = map T.pack $ HL.journalAccountNames j
   in  filter (entryText `matches`) names
-context journal _ entryText (AmountQuestion _ _) = return $
-  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
-context _ _ _  (FinalQuestion _) = return []
+context journal _ defaultCurrency entryText (AmountQuestion _ _) = return $
+  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) defaultCurrency entryText
+context _ _ _ _  (FinalQuestion _) = return []
 
 -- | Suggest the initial text of the entry box for each step
 --
@@ -124,8 +124,8 @@ post' account amount = HL.nullposting { HL.paccount = account
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = (HL.tpostings t) ++ [p] }
 
-trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
-trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
+trySumAmount :: HL.JournalContext -> String -> Text -> Maybe HL.MixedAmount
+trySumAmount ctx defaultCurrency = either (const Nothing) Just . parseAmountWithDefault ctx defaultCurrency
 
 
 -- | Given a previous similar transaction, suggest the next posting to enter

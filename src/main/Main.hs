@@ -47,6 +47,7 @@ data AppState = AppState
   , asMessage :: Text
   , asFilename :: FilePath
   , asDateFormat :: DateFormat
+  , asDefaultCurrency :: String
   , asDialog :: DialogShown
   }
 
@@ -148,6 +149,7 @@ event as ev = case asDialog as of
                    <*> return ""
                    <*> return (asFilename as))
                    <*> return (asDateFormat as)
+                   <*> return (asDefaultCurrency as)
                    <*> return NoDialog
          >>= liftIO . setContext >>= continue
 
@@ -165,7 +167,7 @@ reset as = do
 setContext :: AppState -> IO AppState
 setContext as = do
   ctx <- flip listSimpleReplace (asContext as) . V.fromList <$>
-         context (asJournal as) (asDateFormat as) (editText as) (asStep as)
+         context (asJournal as) (asDateFormat as) (asDefaultCurrency as) (editText as) (asStep as)
   return as { asContext = ctx }
 
 editText :: AppState -> Text
@@ -178,7 +180,7 @@ doNextStep useSelected as = do
                     , Left <$> asMaybe (editText as)
                     , Left <$> asSuggestion as
                     ]
-  s <- nextStep (asJournal as) (asDateFormat as) name (asStep as)
+  s <- nextStep (asJournal as) (asDateFormat as) (asDefaultCurrency as) name (asStep as)
   case s of
     Left err -> return as { asMessage = err }
     Right (Finished trans) -> do
@@ -193,11 +195,12 @@ doNextStep useSelected as = do
         , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
         , asDateFormat = asDateFormat as
+        , asDefaultCurrency = asDefaultCurrency as
         , asDialog = NoDialog
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) (asDateFormat as) s'
-      ctx' <- ctxList . V.fromList <$> context (asJournal as) (asDateFormat as) "" s'
+      ctx' <- ctxList . V.fromList <$> context (asJournal as) (asDateFormat as) (asDefaultCurrency as) "" s'
       return as { asStep = s'
                 , asEditor = clearEdit (asEditor as)
                 , asContext = ctx'
@@ -251,9 +254,10 @@ configPath :: IO FilePath
 configPath = getUserConfigFile "hledger-iadd" "config.conf"
 
 data Options = Options
-  { optLedgerFile :: FilePath
-  , optDateFormat :: String
-  , optDumpConfig :: Bool
+  { optLedgerFile      :: FilePath
+  , optDateFormat      :: String
+  , optDefaultCurrency :: String
+  , optDumpConfig      :: Bool
   }
 
 confParser :: FilePath -> OptParser Options
@@ -261,6 +265,7 @@ confParser home = Options
   -- TODO Convert leading tilde to home
   <$> option "file" (ledgerPath home) "Path to the journal file"
   <*> option "date-format" "[[%y/]%m/]%d" "Format used to parse dates"
+  <*> option "default-currency" "" "Default currency to add to bare amounts"
   <*> pure False
 
 parseConfigFile :: IO Options
@@ -290,6 +295,12 @@ optionParser def = Options
         <> metavar "FORMAT"
         <> value (optDateFormat def)
         <> help "Format used to parse dates"
+        )
+  <*> strOption
+        (  long "default-currency"
+        <> metavar "FORMAT"
+        <> value (optDefaultCurrency def)
+        <> help "Default amount currency"
         )
   <*> switch
         ( long "dump-default-config"
@@ -328,7 +339,7 @@ main = do
       sugg <- suggest journal date DateQuestion
 
       let welcome = "Welcome. Press F1 (or Alt-?) for help."
-          as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date NoDialog
+          as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date (optDefaultCurrency opts) NoDialog
 
       void $ defaultMain app as
 
