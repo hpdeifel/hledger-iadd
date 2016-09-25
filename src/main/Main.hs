@@ -171,6 +171,13 @@ setContext as = do
 editText :: AppState -> Text
 editText = T.concat . getEditContents . asEditor
 
+-- | Add a tranaction at the end of a journal
+--
+-- Hledgers `HL.addTransaction` adds it to the beginning, but our suggestion
+-- system expects newer transactions to be at the end.
+addTransactionEnd :: HL.Transaction -> HL.Journal -> HL.Journal
+addTransactionEnd t j = j { HL.jtxns = HL.jtxns j ++ [t] }
+
 doNextStep :: Bool -> AppState -> IO AppState
 doNextStep useSelected as = do
   let name = fromMaybe (Left $ editText as) $
@@ -186,7 +193,7 @@ doNextStep useSelected as = do
       sugg <- suggest (asJournal as) (asDateFormat as) DateQuestion
       return AppState
         { asStep = DateQuestion
-        , asJournal = HL.addTransaction trans (asJournal  as)
+        , asJournal = addTransactionEnd trans (asJournal  as)
         , asEditor = clearEdit (asEditor as)
         , asContext = ctxList V.empty
         , asSuggestion = sugg
