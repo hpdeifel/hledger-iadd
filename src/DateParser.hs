@@ -114,14 +114,6 @@ parseDate current (DateFormat spec) text =
 newtype IncompleteDate a = IDate (a, a, a)
                        deriving (Monoid, Functor, Show)
 
--- complete a date by filling the undefined fields with the current date's fields
-completeDate :: Day  -> IncompleteDate (Maybe Int) -> Maybe Day
-completeDate current (IDate (y,m,d)) =
-  let (currentYear, currentMonth, currentDay) = toGregorian current
-  in fromGregorianValid (fromMaybe currentYear (toInteger <$> y))
-                        (fromMaybe currentMonth m)
-                        (fromMaybe currentDay d)
-
 data Direction = Future | Past deriving (Eq,Show)
 -- find a date that matches the incomplete date and is as near as possible to
 -- the current date in the given direction (Future means only today and in the
