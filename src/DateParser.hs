@@ -99,7 +99,11 @@ parseDateWithToday spec text = do
 parseDate :: Day -> DateFormat -> Text -> Either Text Day
 parseDate current (DateFormat spec) text =
   let en = Just <$> parseEnglish current
-      num = completeRecentDate current . fmap getFirst <$> parseDate' spec <* eof
+      completeIDate :: IncompleteDate (Maybe Int) -> Maybe Day
+      completeIDate d =
+        completeNearDate Past current d
+        <|> completeNearDate Future current d
+      num = completeIDate . fmap getFirst <$> parseDate' spec <* eof
 
   in case parse ((try en <|> num) <* eof) "date" text of
     Left err -> Left $ T.pack $ show err
@@ -118,32 +122,33 @@ completeDate current (IDate (y,m,d)) =
                         (fromMaybe currentMonth m)
                         (fromMaybe currentDay d)
 
--- find a date in the past as recent as possible that matches the incomplete date
-completeRecentDate :: Day  -> IncompleteDate (Maybe Int) -> Maybe Day
-completeRecentDate current (IDate (i_y,i_m,i_d)) =
+data Direction = Future | Past deriving (Eq,Show)
+-- find a date that matches the incomplete date and is as near as possible to
+-- the current date in the given direction (Future means only today and in the
+-- future; Past means only today and in the past).
+completeNearDate :: Direction -> Day  -> IncompleteDate (Maybe Int) -> Maybe Day
+completeNearDate dir current (IDate (i_year,i_month,i_day)) =
   let
-    (currentYear, currentMonth, currentDay) = toGregorian current
+    sign = if dir == Past then -1 else 1
+    (currentYear, _, _) = toGregorian current
     singleton a = [a]
-    year =
-      -- every date occours at least once in 8 years
-      -- That is because the years divisible by 100 but not by 400 are no leap
-      -- years.
-      fromMaybe (reverse [currentYear-8..currentYear]) (singleton <$> toInteger <$> i_y)
-    month = fromMaybe (reverse [currentMonth-11..currentMonth]) (singleton <$> i_m)
-    day = fromMaybe (reverse [currentDay-31..currentDay]) (singleton <$> i_d)
-    normalize :: Integral a => Integral b => a -> a -> b -> (a,b)
-    normalize c x y = -- there are c many x per y; x is 1-indexed
-      if (x >= 1) then (x,y) else normalize c (x + c) (y - 1)
+    withDefaultRange :: Maybe a -> [a] -> [a]
+    withDefaultRange maybe_value range =
+      fromMaybe
+        (if dir == Past then reverse range else range)
+        (singleton <$> maybe_value)
   in listToMaybe $ do
-    y <- year
-    m <- month
-    d <- day
-    let (d',m') = normalize 31 d m
-    let (m'',y') = normalize 12 m' y
-    completed <- maybeToList (fromGregorianValid y' m'' d')
-    if (completed `diffDays` current > 0)
-    then fail "Completed day in the future."
-    else return completed
+    -- every date occours at least once in 8 years
+    -- That is because the years divisible by 100 but not by 400 are no leap
+    -- years. Depending on dir, choose the past or the next 8 years
+    y <- (toInteger <$> i_year) `withDefaultRange`
+            [currentYear + sign*4 - 4 .. currentYear + sign*4 + 4]
+    m <- i_month  `withDefaultRange` [1..12]
+    d <- i_day    `withDefaultRange` [1..31]
+    completed <- maybeToList (fromGregorianValid y m d)
+    if ((completed `diffDays` current) * sign >= 0)
+    then return completed
+    else fail $ "Completed day not the " ++ show dir ++ "."
 
 
 parseDate' :: [DateSpec] -> Parser (IncompleteDate (First Int))
