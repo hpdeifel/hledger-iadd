@@ -18,6 +18,7 @@ spec :: Spec
 spec = do
   dateFormatTests
   dateTests
+  dateCompletionTests
   printTests
 
 dateFormatTests :: Spec
@@ -36,6 +37,75 @@ dateTests = describe "date parser" $ do
 
     it "is always smaller than the current date" $ property
       weekDaySmallerProp
+
+dateCompletionTests :: Spec
+dateCompletionTests = describe "date completion" $ do
+  it "today" $
+    parseGerman 2004 7 31 "31.7.2004" `shouldBe` Right (fromGregorian 2004 7 31)
+
+  it "today is a leap day" $
+    parseGerman 2012 2 29 "29.2.2012" `shouldBe` Right (fromGregorian 2012 2 29)
+
+  it "skips to previous month" $
+    parseGerman 2016 9 20 "21" `shouldBe` Right (fromGregorian 2016 08 21)
+
+  it "stays in month if possible" $
+    parseGerman 2016 8 30 "21" `shouldBe` Right (fromGregorian 2016 08 21)
+
+  it "skips to previous month to reach the 31st" $
+    parseGerman 2016 8 30 "31" `shouldBe` Right (fromGregorian 2016 07 31)
+
+  it "skips to an earlier month to reach the 31st" $
+    parseGerman 2016 7 30 "31" `shouldBe` Right (fromGregorian 2016 05 31)
+
+  it "skips to the previous year if necessary" $
+    parseGerman 2016 9 30 "2.12." `shouldBe` Right (fromGregorian 2015 12 2)
+
+  it "skips to the previous years if after a leap year" $
+    parseGerman 2017 3 10 "29.2" `shouldBe` Right (fromGregorian 2016 02 29)
+
+  it "even might skip to a leap year 8 years ago" $
+    parseGerman 2104 2 27 "29.2" `shouldBe` Right (fromGregorian 2096 02 29)
+
+  it "some date in the near future" $
+    parseGerman 2016 2 20 "30.11.2016" `shouldBe` Right (fromGregorian 2016 11 30)
+
+  it "some date in the far future" $
+    parseGerman 2016 2 20 "30.11.3348" `shouldBe` Right (fromGregorian 3348 11 30)
+
+  it "last october" $
+    (do
+      monthOnly <- parseDateFormat "%m"
+      parseDate (fromGregorian 2016 9 15) monthOnly "10"
+    ) `shouldBe` Right (fromGregorian 2015 10 31)
+
+  it "last november" $
+    (do
+      monthOnly <- parseDateFormat "%m"
+      parseDate (fromGregorian 2016 9 15) monthOnly "11"
+    ) `shouldBe` Right (fromGregorian 2015 11 30)
+
+  it "next november" $
+    (do
+      yearMonth <- parseDateFormat "%y.%m"
+      parseDate (fromGregorian 2016 9 15) yearMonth "2016.11"
+    ) `shouldBe` Right (fromGregorian 2016 11 1)
+
+  it "next january" $
+    (do
+      yearMonth <- parseDateFormat "%y.%m"
+      parseDate (fromGregorian 2016 9 15) yearMonth "2017.1"
+    ) `shouldBe` Right (fromGregorian 2017 1 1)
+
+  it "last january" $
+    (do
+      yearMonth <- parseDateFormat "%y.%m"
+      parseDate (fromGregorian 2016 9 15) yearMonth "2016.1"
+    ) `shouldBe` Right (fromGregorian 2016 1 31)
+
+  where
+    parseGerman :: Integer -> Int -> Int -> String -> Either Text Day
+    parseGerman y m d str = parseDate (fromGregorian y m d)  german (T.pack str)
 
 printTests :: Spec
 printTests = describe "date printer" $ do
