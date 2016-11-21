@@ -98,8 +98,8 @@ draw as = case asDialog as of
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
 
-event :: AppState -> Event -> EventM Name (Next AppState)
-event as ev = case asDialog as of
+event :: AppState -> BrickEvent Name Event -> EventM Name (Next AppState)
+event as (VtyEvent ev) = case asDialog as of
   HelpDialog helpDia -> case ev of
     EvKey key []
       | key `elem` [KChar 'q', KEsc] -> continue as { asDialog = NoDialog }
@@ -150,6 +150,7 @@ event as ev = case asDialog as of
                    <*> return (asDateFormat as)
                    <*> return NoDialog
          >>= liftIO . setContext >>= continue
+event as _ = continue as
 
 reset :: AppState -> IO AppState
 reset as = do
@@ -343,7 +344,6 @@ main = do
                     , appChooseCursor = showFirstCursor
                     , appHandleEvent = event
                     , appAttrMap = const attrs
-                    , appLiftVtyEvent = id
                     , appStartEvent = return
                     } :: App AppState Event Name
 
