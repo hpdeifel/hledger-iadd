@@ -6,6 +6,7 @@ import           Brick
 import           Brick.Widgets.List
 import           Data.Monoid
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
 
@@ -18,7 +19,7 @@ viewState (DescriptionQuestion date) = str $
 viewState (AccountQuestion trans) = str $
   HL.showTransaction trans
 viewState (AmountQuestion acc trans) = str $
-  HL.showTransaction trans ++ "  " ++ acc
+  HL.showTransaction trans ++ "  " ++ T.unpack acc
 viewState (FinalQuestion trans) = str $
   HL.showTransaction trans
 

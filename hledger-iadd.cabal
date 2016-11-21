@@ -28,7 +28,7 @@ library
                      , Brick.Widgets.BetterDialog
   default-language:    Haskell2010
   build-depends:       base >= 4.8 && < 5
-                     , hledger-lib >= 0.27 && < 0.28
+                     , hledger-lib >= 1.0 && < 1.1
                      , brick >= 0.14 && < 0.15
                      , vty >= 5.4
                      , text
@@ -37,7 +37,8 @@ library
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
-                     , parsec
+                     , megaparsec >= 5.0 && <5.2
+                     , containers
                      , optparse-applicative
                      , directory
                      , text-format
@@ -51,7 +52,7 @@ executable hledger-iadd
   default-language:    Haskell2010
   build-depends:       base >= 4.8 && < 5
                      , hledger-iadd
-                     , hledger-lib >= 0.27 && < 0.28
+                     , hledger-lib >= 1.0 && < 1.1
                      , brick >= 0.14 && < 0.15
                      , vty >= 5.4
                      , text
@@ -60,7 +61,6 @@ executable hledger-iadd
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
-                     , parsec
                      , optparse-applicative
                      , directory
                      , text-format
@@ -79,12 +79,11 @@ test-suite spec
   default-language:   Haskell2010
   build-depends:      base >= 4.8 && < 5
                     , hledger-iadd
-                    , hledger-lib >= 0.27 && < 0.28
+                    , hledger-lib >= 1.0 && < 1.1
                     , text
                     , transformers >= 0.3
                     , time >= 1.5
                     , vector
-                    , parsec
                     , hspec
                     , QuickCheck
                     , text-format

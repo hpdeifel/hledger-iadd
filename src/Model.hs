@@ -43,15 +43,16 @@ nextStep journal dateFormat entryText current = case current of
                                                  entryText
   DescriptionQuestion day -> return $ Right $ Step $
     AccountQuestion HL.nulltransaction { HL.tdate = day
-                                       , HL.tdescription = T.unpack (fromEither entryText)}
+                                       , HL.tdescription = (fromEither entryText)
+                                       }
   AccountQuestion trans
     | T.null (fromEither entryText) && transactionBalanced trans
       -> return $ Right $ Step $ FinalQuestion trans
     | T.null (fromEither entryText)  -- unbalanced
       -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
-      AmountQuestion (T.unpack (fromEither entryText)) trans
-  AmountQuestion name trans -> case parseAmount (HL.jContext journal) (fromEither entryText) of
+      AmountQuestion (fromEither entryText) trans
+  AmountQuestion name trans -> case parseAmount journal (fromEither entryText) of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
       let newPosting = post' name amount
@@ -79,13 +80,13 @@ context _ dateFormat entryText DateQuestion = parseDateWithToday dateFormat entr
   Left _ -> return []
   Right date -> return [T.pack $ HL.showDate date]
 context j _ entryText (DescriptionQuestion _) = return $
-  let descs = map T.pack $ HL.journalDescriptions j
+  let descs = HL.journalDescriptions j
   in sortBy (descUses j) $ filter (entryText `matches`) descs
 context j _ entryText (AccountQuestion _) = return $
-  let names = map T.pack $ HL.journalAccountNames j
+  let names = HL.journalAccountNames j
   in  filter (entryText `matches`) names
 context journal _ entryText (AmountQuestion _ _) = return $
-  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount (HL.jContext journal) entryText
+  maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount journal entryText
 context _ _ _  (FinalQuestion _) = return []
 
 -- | Suggest the initial text of the entry box for each step
@@ -98,7 +99,7 @@ suggest _ _ (DescriptionQuestion _) = return Nothing
 suggest journal _ (AccountQuestion trans) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
-    else T.pack . HL.paccount <$> (suggestAccountPosting journal trans)
+    else HL.paccount <$> (suggestAccountPosting journal trans)
 suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
   if transactionBalanced trans
     then HL.pamount <$> (findPostingByAcc account =<< findLastSimilar journal trans)
@@ -124,7 +125,7 @@ post' account amount = HL.nullposting { HL.paccount = account
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = (HL.tpostings t) ++ [p] }
 
-trySumAmount :: HL.JournalContext -> Text -> Maybe HL.MixedAmount
+trySumAmount :: HL.Journal -> Text -> Maybe HL.MixedAmount
 trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
 
 
@@ -161,7 +162,7 @@ suggestCorrespondingPosting current reference =
 findLastSimilar :: HL.Journal -> HL.Transaction -> Maybe HL.Transaction
 findLastSimilar journal desc =
   maximumBy (compare `on` HL.tdate) <$>
-    listToMaybe' (filter (((==) `on` (T.pack . HL.tdescription)) desc) $ HL.jtxns journal)
+    listToMaybe' (filter (((==) `on` HL.tdescription) desc) $ HL.jtxns journal)
 
 suggestAccountPosting :: HL.Journal -> HL.Transaction -> Maybe HL.Posting
 suggestAccountPosting journal trans =
@@ -196,7 +197,7 @@ negativeAmountSum trans =
 -- the given journal.
 descUses :: HL.Journal -> Text -> Text -> Ordering
 descUses journal = compare `on` (Down . flip HM.lookup usesMap)
-  where usesMap = foldr (count . T.pack . HL.tdescription) HM.empty $
+  where usesMap = foldr (count . HL.tdescription) HM.empty $
                   HL.jtxns journal
         -- Add one to the current count of this element
         count :: Text -> HM.HashMap Text (Sum Int) -> HM.HashMap Text (Sum Int)

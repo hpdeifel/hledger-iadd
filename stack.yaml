@@ -6,5 +6,4 @@ extra-deps:
 - brick-0.14
 - text-zipper-0.9
 - vty-5.13
-- hledger-lib-0.27
 resolver: lts-7.9

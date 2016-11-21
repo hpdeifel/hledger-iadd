@@ -326,7 +326,7 @@ main = do
     Right res -> return res
 
   let path = optLedgerFile opts
-  journalContents <- readFile path
+  journalContents <- T.readFile path
 
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
     Left err -> hPutStrLn stderr err >> exitFailure

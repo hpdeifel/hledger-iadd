@@ -30,8 +30,8 @@ import           Data.Text.Lazy.Builder (Builder, toLazyText)
 import           Data.Time hiding (parseTime)
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
-import           Text.Parsec hiding ((<|>), many)
-import           Text.Parsec.Text
+import           Text.Megaparsec hiding ((<|>), many)
+import           Text.Megaparsec.Text
 
 newtype DateFormat = DateFormat [DateSpec]
                    deriving (Eq, Show)
@@ -48,7 +48,7 @@ data DateSpec = DateYear
 
 
 parseHLDate :: Day -> Text -> Either Text Day
-parseHLDate current text = case parse HL.smartdate "date" (T.unpack text) of
+parseHLDate current text = case parse HL.smartdate "date" text of
   Right res -> Right $ HL.fixSmartDate current res
   Left err -> Left $ T.pack $ show err
 
@@ -76,7 +76,7 @@ oneTok :: Parser DateSpec
 oneTok =  char '%' *> percent
       <|> char '\\' *> escape
       <|> DateOptional <$> between (char '[') (char ']') (many oneTok)
-      <|> DateString . T.pack <$> some (noneOf "\\[]%")
+      <|> DateString . T.pack <$> some (noneOf ("\\[]%" :: String))
 
 percent :: Parser DateSpec
 percent =  char 'y' *> pure DateYearShort
@@ -161,7 +161,7 @@ parseDate1 ds = case ds of
   DateString s  -> string (T.unpack s) >> pure mempty
   DateOptional ds' -> option mempty (try $ parseDate' ds')
 
-  where digits = some digit
+  where digits = some digitChar
         part f = IDate . f . First . Just . (read :: String -> Int)  <$> digits
         completeYear year
           | year < 100 = year + 2000

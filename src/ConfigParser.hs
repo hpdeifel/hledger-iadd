@@ -52,11 +52,12 @@ import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import qualified Text.Parsec as P
-import           Text.Parsec hiding ((<|>), many, option, optional)
-import           Text.Parsec.Char
-import           Text.Parsec.Error
-import           Text.Parsec.Text
+import qualified Data.Set as S
+import qualified Text.Megaparsec as P
+import           Text.Megaparsec hiding ((<|>), many, option, optional)
+import           Text.Megaparsec.Char
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.Text
 
 -- | Parse a config file from a 'Text'.
 parseConfig :: FilePath -- ^ File path to use in error messages
@@ -89,9 +90,9 @@ data Option a = Option
 type OptParser a = Ap Option a
 
 -- | Errors that can occur during parsing. Use the 'Show' instance for printing.
-data ConfParseError = SyntaxError ParseError
+data ConfParseError = SyntaxError (ParseError Char Dec)
                     | UnknownOption SourcePos Text
-                    | TypeError ParseError
+                    | TypeError (ParseError Char Dec)
   deriving (Eq)
 
 instance Show ConfParseError where
@@ -175,7 +176,7 @@ parseOption (Ap opt rest) ass
     let content = (valueContent $ assignmentValue ass)
         pos = (valuePosition $ assignmentValue ass)
     in case parseWithStart (optParser opt <* eof) pos content of
-         Left e -> Left $ TypeError $ flip addErrorMessage e $ Message $
+         Left e -> Left $ TypeError $ addErrorMessage e $
            "in " ++ T.unpack (optType opt) ++ " argument for option " ++ T.unpack (assignmentKey ass)
          Right res -> Right $ fmap ($ res) rest
   | otherwise = fmap (Ap opt) $ parseOption rest ass
@@ -206,40 +207,45 @@ assignment = do
     <*> value
 
 key :: Parser Text
-key = T.pack <$> many1 (alphaNum <|> char '_' <|> char '-')
+key = T.pack <$> some (alphaNumChar <|> char '_' <|> char '-')
 
 value :: Parser AssignmentValue
-value = AssignmentValue <$> getPosition <*> content <* whitespaceNoEOL <* (void (endOfLine) <|> eof)
+value = AssignmentValue <$> getPosition <*> content <* whitespaceNoEOL <* (void eol <|> eof)
 
 content :: Parser Text
 content =  escapedString
        <|> bareString
 
 bareString :: Parser Text
-bareString = (T.strip . T.pack <$> many1 (noneOf "#\n"))
+bareString = (T.strip . T.pack <$> some (noneOf ("#\n" :: String)))
   <?> "bare string"
 
 escapedString :: Parser Text
 escapedString = (T.pack <$> (char '"' *> many escapedChar <* char '"'))
                 <?> "quoted string"
   where escapedChar =  char '\\' *> anyChar
-                   <|> noneOf "\""
+                   <|> noneOf ("\"" :: String)
 
 whitespace :: Parser ()
-whitespace = skipMany $ (void $ oneOf " \t\n") <|> comment
+whitespace = skipMany $ (void $ oneOf (" \t\n" :: String)) <|> comment
 
 whitespaceNoEOL :: Parser ()
-whitespaceNoEOL = skipMany $ (void $ oneOf " \t") <|> comment
+whitespaceNoEOL = skipMany $ (void $ oneOf (" \t" :: String)) <|> comment
 
 whitespaceNoComment :: Parser ()
-whitespaceNoComment = skipMany $ oneOf " \t"
+whitespaceNoComment = skipMany $ oneOf (" \t" :: String)
 
 comment :: Parser ()
-comment = char '#' >> skipMany (noneOf "\n")
+comment = char '#' >> skipMany (noneOf ("\n" :: String))
 
-parseWithStart :: Stream s Identity t => Parsec s () a -> SourcePos -> s -> Either ParseError a
+parseWithStart :: (Stream s, ErrorComponent e)
+               => Parsec e s a -> SourcePos -> s -> Either (ParseError (Token s) e) a
 parseWithStart p pos = parse p' (sourceName pos)
   where p' = do setPosition pos; p
 
 parseNumber :: Read a => Parser a
-parseNumber = read <$> ((<>) <$> (P.option "" $ string "-") <*> many1 digit)
+parseNumber = read <$> ((<>) <$> (P.option "" $ string "-") <*> some digitChar)
+
+-- | Helper function brought over from parsec
+addErrorMessage :: ParseError t Dec -> String -> ParseError t Dec
+addErrorMessage e errorMsg = e { errorCustom = S.insert (DecFail errorMsg) (errorCustom e) }
