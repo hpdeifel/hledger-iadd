@@ -1,3 +1,5 @@
+# stack.yaml for ghc-7.10
+
 flags: {}
 extra-package-dbs: []
 packages:
@@ -7,4 +9,4 @@ extra-deps:
 - text-zipper-0.9
 - vty-5.13
 - hledger-lib-0.27
-resolver: lts-7.9
+resolver: lts-6.26
