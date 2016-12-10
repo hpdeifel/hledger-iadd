@@ -9,7 +9,7 @@ An interactive terminal UI as drop-in replacement for `hledger add`.
 This project improves in the following ways on hledger's `add` command:
 
  - Interactive as-you-type completion for account names and
-   descriptions.
+   descriptions with optional fuzzy matching (see [below](#configuration-file)).
 
  - Integrated calculator: Amounts can be written as simple sums with
    real-time feedback on the result.
@@ -70,6 +70,8 @@ The following command line options are available:
     `[[%y/]%m/]%d`, the usual ledger date format). Brackets can be
     used to specify optional parts. E.g the german date format would
     be `%d[.[%m[.[%y]]]]`
+  - `--completion-engine`: Algorithm for account name completion. Can
+    be `substrings` or `fuzzy`.
   - `--dump-default-config`: Print the example config file to stdout
     and exit
 
@@ -148,6 +150,12 @@ The following options are currently available:
   - `file`: Path to the journal file.
   - `date-format`: The date format. See the documentation for
     `--date-format` for details.
+  - `completion-engine`: Algorithm used to find completions for
+    account names. Possible values are:
+	- `substrings`: Every word in the search string has to occur
+      somewhere in the account name
+	- `fuzzy`: All letters from the search string have to appear in
+      the name in the same order
 
 
 [stack]: https://github.com/commercialhaskell/stack
