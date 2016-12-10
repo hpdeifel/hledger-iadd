@@ -89,4 +89,5 @@ test-suite spec
                     , QuickCheck
                     , text-format
                     , free >= 4.12.4
-  ghc-options:        -threaded
+                    , megaparsec >= 5.0 && <5.2
+  ghc-options:        -threaded -Wall

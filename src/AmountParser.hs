@@ -1,4 +1,4 @@
-module AmountParser where
+module AmountParser (parseAmount) where
 
 import           Data.Text (Text)
 import qualified Data.Text as T
