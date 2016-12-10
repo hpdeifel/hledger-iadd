@@ -27,6 +27,7 @@ import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
 import           Lens.Micro
 import           Options.Applicative hiding (str, option)
+import qualified Options.Applicative as OA
 import           System.Directory
 import           System.Environment.XDG.BaseDir
 import           System.Exit
@@ -263,9 +264,19 @@ ledgerPath home = home <> "/.hledger.journal"
 configPath :: IO FilePath
 configPath = getUserConfigFile "hledger-iadd" "config.conf"
 
+-- | Megaparsec parser for MatchAlgo, used for config file parsing
 parseMatchAlgo :: P.Parser MatchAlgo
 parseMatchAlgo =  (P.string "fuzzy" *> pure Fuzzy)
               <|> (P.string "substrings" *> pure Substrings)
+
+-- | ReadM parser for MatchAlgo, used for command line option parsing
+readMatchAlgo :: ReadM MatchAlgo
+readMatchAlgo = eitherReader reader
+  where
+    reader str
+      | str == "fuzzy" = return Fuzzy
+      | str == "substrings" = return Substrings
+      | otherwise = Left "Expected \"fuzzy\" or \"substrings\""
 
 data Options = Options
   { optLedgerFile :: FilePath
@@ -316,7 +327,11 @@ optionParser def = Options
         <> value (optDateFormat def)
         <> help "Format used to parse dates"
         )
-  <*> pure (optMatchAlgo def)
+  <*> OA.option readMatchAlgo
+        (  long "completion-engine"
+        <> metavar "ENGINE"
+        <> value (optMatchAlgo def)
+        <> help "Algorithm for account name completion. Possible values: \"fuzzy\", \"substrings\"")
   <*> switch
         ( long "dump-default-config"
        <> help "Print an example configuration file to stdout and exit"
