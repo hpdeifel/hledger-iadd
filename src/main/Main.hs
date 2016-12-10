@@ -66,7 +66,7 @@ bindings :: KeyBindings
 bindings = KeyBindings
   [ ("Denial",
      [ ("C-c, C-d", "Quit without saving the current transaction")
-     , ("Esc", "Abort the current transaction")
+     , ("Esc", "Abort the current transaction or exit when at toplevel")
      ])
   , ("Anger",
      [ ("F1, Alt-?", "Show help screen")])
@@ -140,6 +140,7 @@ event as (VtyEvent ev) = case asDialog as of
                                , asMessage = ""}
     EvKey (KChar '\t') [] -> continue (insertSelected as)
     EvKey KEsc []
+      | asStep as == DateQuestion && T.null (editText as) -> halt as
       | asStep as == DateQuestion -> liftIO (reset as) >>= continue
       | otherwise -> continue as { asDialog = AbortDialog }
     EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
