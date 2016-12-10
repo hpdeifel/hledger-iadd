@@ -65,7 +65,7 @@ myHelpDialog = HelpDialog (helpWidget HelpName bindings)
 bindings :: KeyBindings
 bindings = KeyBindings
   [ ("Denial",
-     [ ("C-c", "Quit without saving the current transaction")
+     [ ("C-c, C-d", "Quit without saving the current transaction")
      , ("Esc", "Abort the current transaction")
      ])
   , ("Anger",
@@ -102,6 +102,7 @@ draw as = case asDialog as of
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
 
+-- TODO Refactor to remove code duplication in individual case statements
 event :: AppState -> BrickEvent Name Event -> EventM Name (Next AppState)
 event as (VtyEvent ev) = case asDialog as of
   HelpDialog helpDia -> case ev of
@@ -124,6 +125,9 @@ event as (VtyEvent ev) = case asDialog as of
     _ -> continue as
   NoDialog -> case ev of
     EvKey (KChar 'c') [MCtrl]
+      | asStep as == DateQuestion -> halt as
+      | otherwise -> continue as { asDialog = QuitDialog }
+    EvKey (KChar 'd') [MCtrl]
       | asStep as == DateQuestion -> halt as
       | otherwise -> continue as { asDialog = QuitDialog }
     EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as

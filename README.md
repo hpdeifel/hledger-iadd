@@ -111,7 +111,7 @@ The following keyboard shortcuts are available:
 
 | Key                             | Function                                                                      |
 | ------------------------------- | ----------------------------------------------------------------------------- |
-| <kbd>C-c</kbd>                  | Quit the program without saving the current transaction                       |
+| <kbd>C-c</kbd>, <kbd>C-d</kbd>  | Quit the program without saving the current transaction                       |
 | <kbd>Esc</kbd>                  | Abort the current transaction                                                 |
 | <kbd>Ret</kbd>                  | Accept the currently selected answer                                          |
 | <kbd>Alt-Ret</kbd>              | Accept the current answer verbatim from the text area, ignoring the selection |
