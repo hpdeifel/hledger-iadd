@@ -11,7 +11,7 @@ type Parser a = HL.JournalStateParser Identity a
 
 parseAmount :: HL.Journal -> Text -> Either String HL.MixedAmount
 parseAmount journal t = case runIdentity $ runParserT (evalStateT (mixed <* optional space <* eof) journal) "" t of
-  Left err -> Left (show err)
+  Left err -> Left (parseErrorPretty err)
   Right res -> Right res
 
 mixed :: Parser HL.MixedAmount

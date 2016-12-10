@@ -97,7 +97,7 @@ draw as = case asDialog as of
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
-          <=> txt (asMessage as <> " ") -- TODO Add space only if message is empty
+          <=> txt (T.strip (asMessage as) <> " ") -- TODO Add space only if message is empty
 
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
@@ -313,7 +313,7 @@ parseConfigFile = do
     Left (_ :: SomeException) -> return (parserDefault $ confParser home)
     Right res -> case parseConfig path res (confParser home) of
       Left err -> do
-        print err
+        putStr (show err)
         exitFailure
       Right res' -> return res'
 
@@ -359,7 +359,7 @@ main = do
   date <- case parseDateFormat (T.pack $ optDateFormat opts) of
     Left err -> do
       hPutStr stderr "Could not parse date format: "
-      T.hPutStrLn stderr err
+      T.hPutStr stderr err
       exitWith (ExitFailure 1)
     Right res -> return res
 
