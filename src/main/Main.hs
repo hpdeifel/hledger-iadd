@@ -373,7 +373,7 @@ main = do
 
       sugg <- suggest journal date DateQuestion
 
-      let welcome = "Welcome. Press F1 (or Alt-?) for help."
+      let welcome = "Welcome! Press F1 (or Alt-?) for help. Exit with Ctrl-d."
           matchAlgo = optMatchAlgo opts
           as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog
 
