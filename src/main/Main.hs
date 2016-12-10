@@ -9,7 +9,7 @@ import           Brick.Widgets.BetterDialog
 import           Brick.Widgets.Edit
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
-import           Graphics.Vty hiding (parseConfigFile, parseConfig)
+import           Graphics.Vty hiding (parseConfigFile, parseConfig, (<|>))
 
 import           Control.Exception
 import           Control.Monad
@@ -31,6 +31,8 @@ import           System.Directory
 import           System.Environment.XDG.BaseDir
 import           System.Exit
 import           System.IO
+import qualified Text.Megaparsec as P
+import qualified Text.Megaparsec.Text as P
 
 import           Brick.Widgets.HelpMessage
 import           DateParser
@@ -47,6 +49,7 @@ data AppState = AppState
   , asMessage :: Text
   , asFilename :: FilePath
   , asDateFormat :: DateFormat
+  , asMatchAlgo :: MatchAlgo
   , asDialog :: DialogShown
   }
 
@@ -148,6 +151,7 @@ event as (VtyEvent ev) = case asDialog as of
                    <*> return ""
                    <*> return (asFilename as))
                    <*> return (asDateFormat as)
+                   <*> return (asMatchAlgo as)
                    <*> return NoDialog
          >>= liftIO . setContext >>= continue
 event as _ = continue as
@@ -166,7 +170,7 @@ reset as = do
 setContext :: AppState -> IO AppState
 setContext as = do
   ctx <- flip listSimpleReplace (asContext as) . V.fromList <$>
-         context (asJournal as) (asDateFormat as) (editText as) (asStep as)
+         context (asJournal as) (asMatchAlgo as) (asDateFormat as) (editText as) (asStep as)
   return as { asContext = ctx }
 
 editText :: AppState -> Text
@@ -201,11 +205,12 @@ doNextStep useSelected as = do
         , asMessage = "Transaction written to journal file"
         , asFilename = asFilename as
         , asDateFormat = asDateFormat as
+        , asMatchAlgo = asMatchAlgo as
         , asDialog = NoDialog
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) (asDateFormat as) s'
-      ctx' <- ctxList . V.fromList <$> context (asJournal as) (asDateFormat as) "" s'
+      ctx' <- ctxList . V.fromList <$> context (asJournal as) (asMatchAlgo as) (asDateFormat as) "" s'
       return as { asStep = s'
                 , asEditor = clearEdit (asEditor as)
                 , asContext = ctx'
@@ -258,9 +263,14 @@ ledgerPath home = home <> "/.hledger.journal"
 configPath :: IO FilePath
 configPath = getUserConfigFile "hledger-iadd" "config.conf"
 
+parseMatchAlgo :: P.Parser MatchAlgo
+parseMatchAlgo =  (P.string "fuzzy" *> pure Fuzzy)
+              <|> (P.string "substrings" *> pure Substrings)
+
 data Options = Options
   { optLedgerFile :: FilePath
   , optDateFormat :: String
+  , optMatchAlgo :: MatchAlgo
   , optDumpConfig :: Bool
   }
 
@@ -269,6 +279,13 @@ confParser home = Options
   -- TODO Convert leading tilde to home
   <$> option "file" (ledgerPath home) "Path to the journal file"
   <*> option "date-format" "[[%y/]%m/]%d" "Format used to parse dates"
+  <*> customOption "completion-engine" Substrings "substrings"
+      ( "Algorithm used to find completions for account names. Possible values are:\n"
+      <> "  - substrings: Every word in the search string has to occur somewhere in the account name\n"
+      <> "  - fuzzy: All letters from the search string have to appear in the name in the same order"
+      )
+      "string"
+      parseMatchAlgo
   <*> pure False
 
 parseConfigFile :: IO Options
@@ -299,6 +316,7 @@ optionParser def = Options
         <> value (optDateFormat def)
         <> help "Format used to parse dates"
         )
+  <*> pure (optMatchAlgo def)
   <*> switch
         ( long "dump-default-config"
        <> help "Print an example configuration file to stdout and exit"
@@ -336,7 +354,8 @@ main = do
       sugg <- suggest journal date DateQuestion
 
       let welcome = "Welcome. Press F1 (or Alt-?) for help."
-          as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date NoDialog
+          matchAlgo = optMatchAlgo opts
+          as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog
 
       void $ defaultMain app as
 

@@ -3,6 +3,7 @@
 module Model
        ( Step(..)
        , MaybeStep(..)
+       , MatchAlgo(..)
        , nextStep
        , undo
        , context
@@ -34,6 +35,9 @@ data Step = DateQuestion
 data MaybeStep = Finished HL.Transaction
                | Step Step
                deriving (Eq, Show)
+
+data MatchAlgo = Fuzzy | Substrings
+  deriving (Eq, Show)
 
 nextStep :: HL.Journal -> DateFormat -> Either Text Text -> Step -> IO (Either Text MaybeStep)
 nextStep journal dateFormat entryText current = case current of
@@ -75,19 +79,19 @@ undo current = case current of
   AmountQuestion _ trans -> Right $ AccountQuestion trans
   FinalQuestion trans -> undo (AccountQuestion trans)
 
-context :: HL.Journal -> DateFormat -> Text -> Step -> IO [Text]
-context _ dateFormat entryText DateQuestion = parseDateWithToday dateFormat entryText >>= \case
+context :: HL.Journal -> MatchAlgo -> DateFormat -> Text -> Step -> IO [Text]
+context _ _ dateFormat entryText DateQuestion = parseDateWithToday dateFormat entryText >>= \case
   Left _ -> return []
   Right date -> return [T.pack $ HL.showDate date]
-context j _ entryText (DescriptionQuestion _) = return $
+context j matchAlgo _ entryText (DescriptionQuestion _) = return $
   let descs = HL.journalDescriptions j
-  in sortBy (descUses j) $ filter (entryText `matches`) descs
-context j _ entryText (AccountQuestion _) = return $
+  in sortBy (descUses j) $ filter (matches matchAlgo entryText) descs
+context j matchAlgo _ entryText (AccountQuestion _) = return $
   let names = HL.journalAccountNames j
-  in  filter (entryText `matches`) names
-context journal _ entryText (AmountQuestion _ _) = return $
+  in  filter (matches matchAlgo entryText) names
+context journal _ _ entryText (AmountQuestion _ _) = return $
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount journal entryText
-context _ _ _  (FinalQuestion _) = return []
+context _ _ _ _  (FinalQuestion _) = return []
 
 -- | Suggest the initial text of the entry box for each step
 --
@@ -111,13 +115,13 @@ suggest _ _ (FinalQuestion _) = return $ Just "y"
 -- If the pattern is empty, we don't want any entries in the list, so nothing is
 -- selected if the users enters an empty string. Empty inputs are special cased,
 -- so this is important.
-matches :: Text -> Text -> Bool
-matches a b
+matches :: MatchAlgo -> Text -> Text -> Bool
+matches algo a b
   | T.null a = False
   | otherwise = matches' (T.toCaseFold a) (T.toCaseFold b)
   where
     matches' a' b'
-      | T.any (== ':') b' = all (`fuzzyMatch` (T.splitOn ":" b')) (T.words a')
+      | algo == Fuzzy && T.any (== ':') b' = all (`fuzzyMatch` (T.splitOn ":" b')) (T.words a')
       | otherwise = all (`T.isInfixOf` b') (T.words a')
 
 fuzzyMatch :: Text -> [Text] -> Bool

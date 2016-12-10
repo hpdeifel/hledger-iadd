@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -34,6 +35,7 @@ module ConfigParser
        , parseConfig
        , parseConfigFile
        , option
+       , customOption
        , parserDefault
        , parserExample
        , ConfParseError
@@ -121,6 +123,15 @@ option :: OptionArgument a
        -> OptParser a
 option name def help = liftAp $ Option parser typename name help def (printArgument def)
   where (typename, parser) = mkParser
+
+customOption :: Text -- ^ The option name
+             -> a -- ^ The default Value
+             -> Text -- ^ A textual representation of the default value
+             -> Text -- ^ A help string for the option
+             -> Text -- ^ A description of the expected type such sas "string" or "integer"
+             -> Parser a -- ^ Parser for the option
+             -> OptParser a
+customOption optName optDefault optDefaultTxt optHelp optType optParser = liftAp $ Option {..}
 
 instance OptionArgument Int where
   mkParser = ("integer", parseNumber)

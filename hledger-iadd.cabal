@@ -67,6 +67,7 @@ executable hledger-iadd
                      , xdg-basedir
                      , unordered-containers
                      , free >= 4.12.4
+                     , megaparsec >= 5.0 && <5.2
 
   ghc-options:         -threaded
 
