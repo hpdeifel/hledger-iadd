@@ -1,7 +1,7 @@
 # Use new container infrastructure to enable caching
 sudo: false
 
-language: c
+language: haskell
 
 # Caching so the next build will be fast too.
 cache:
