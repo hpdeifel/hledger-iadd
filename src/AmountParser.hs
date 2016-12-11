@@ -1,7 +1,6 @@
 module AmountParser (parseAmount) where
 
 import           Data.Text (Text)
-import qualified Data.Text as T
 import qualified Hledger as HL
 import           Data.Functor.Identity
 import           Control.Monad.Trans.State.Strict

@@ -285,7 +285,7 @@ instance Monoid (CommonOptions Maybe) where
 
   mempty = CommonOptions Nothing Nothing Nothing
 
-optNatTrans :: Functor f => (forall a. f a -> g a) -> CommonOptions f -> CommonOptions g
+optNatTrans :: (forall a. f a -> g a) -> CommonOptions f -> CommonOptions g
 optNatTrans nat opts = CommonOptions
   { optLedgerFile = nat $ optLedgerFile opts
   , optDateFormat = nat $ optDateFormat opts

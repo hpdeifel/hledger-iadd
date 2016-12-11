@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module ConfigParserSpec (spec) where
 
 import           Test.Hspec
 import           Test.QuickCheck
 
-import           Control.Arrow
-import           Data.Char
 import           Data.Text (Text)
 import qualified Data.Text as T
 
@@ -239,9 +239,6 @@ exampleParseableProp testData =
 
 isLeft :: Either a b -> Bool
 isLeft = either (const True) (const False)
-
-isAsciiAlnum :: Char -> Bool
-isAsciiAlnum = uncurry (&&) . (isAscii &&& isAlphaNum)
 
 instance Arbitrary TestData where
   arbitrary = TestData <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

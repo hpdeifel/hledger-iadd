@@ -45,20 +45,15 @@ module ConfigParser
 
 import           Control.Applicative
 import           Control.Applicative.Free
-import           Control.Arrow
 import           Control.Monad
-import           Data.Char
 import           Data.Functor.Identity
 import           Data.Monoid
-import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Set as S
 import qualified Text.Megaparsec as P
 import           Text.Megaparsec hiding ((<|>), many, option, optional)
-import           Text.Megaparsec.Char
-import           Text.Megaparsec.Error
 import           Text.Megaparsec.Text
 
 -- | Parse a config file from a 'Text'.
@@ -191,8 +186,6 @@ parseOption (Ap opt rest) ass
            "in " ++ T.unpack (optType opt) ++ " argument for option " ++ T.unpack (assignmentKey ass)
          Right res -> Right $ fmap ($ res) rest
   | otherwise = fmap (Ap opt) $ parseOption rest ass
-
-  where testParse = Nothing
 
 -- Low level assignment parser
 
