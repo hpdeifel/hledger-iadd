@@ -100,7 +100,7 @@ data ConfParseError = SyntaxError (ParseError Char Dec)
 instance Show ConfParseError where
   show (SyntaxError e) = parseErrorPretty e
   show (UnknownOption pos key) =
-    show pos ++ ": Unknown option " ++ T.unpack key
+    sourcePosPretty pos ++ ": Unknown option " ++ T.unpack key ++ "\n"
   show (TypeError e) = parseErrorPretty e
 
 -- | Class for supported option types.
