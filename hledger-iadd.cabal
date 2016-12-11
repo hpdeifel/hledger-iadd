@@ -71,6 +71,7 @@ library
                      , xdg-basedir
                      , unordered-containers
                      , free >= 4.12.4
+  ghc-options:         -Wall -fdefer-typed-holes -fno-warn-name-shadowing
 
 executable hledger-iadd
   hs-source-dirs:      src/main
@@ -94,8 +95,7 @@ executable hledger-iadd
                      , unordered-containers
                      , free >= 4.12.4
                      , megaparsec >= 5.0 && <5.2
-
-  ghc-options:         -threaded
+  ghc-options:         -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
 
 test-suite spec
   type:               exitcode-stdio-1.0
@@ -117,4 +117,4 @@ test-suite spec
                     , text-format
                     , free >= 4.12.4
                     , megaparsec >= 5.0 && <5.2
-  ghc-options:        -threaded -Wall
+  ghc-options:        -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
