@@ -1,3 +1,9 @@
+# 1.1.1
+
+ - bugfix: Show cursor in empty entry widget
+ - bugfix: Correctly execute `--help` and `--dump-default-config` in
+   the presence of syntax errors in the config file
+
 # 1.1
 
  - Add a configuration file for persistent settings
