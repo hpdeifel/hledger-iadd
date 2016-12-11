@@ -368,7 +368,7 @@ main = do
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
     Left err -> hPutStrLn stderr err >> exitFailure
     Right journal -> do
-      let edit = editor EditorName (txt . T.concat) (Just 1) ""
+      let edit = editor EditorName (nonEmptyTxt . T.concat) (Just 1) ""
 
       sugg <- suggest journal date DateQuestion
 
@@ -390,3 +390,12 @@ expand = padBottom Max
 
 ctxList :: V.Vector e -> List Name e
 ctxList v = (if V.null v then id else listMoveTo 0) $ list ListName v 1
+
+-- | Workaround for bug in brick's edit widget
+--
+-- Since brick version 0.15, an empty edit widget wouldn't show a cursor, so
+-- this artificially adds a space to empty input text.
+nonEmptyTxt :: Text -> Widget n
+nonEmptyTxt input
+  | T.null input = txt " "
+  | otherwise    = txt input
