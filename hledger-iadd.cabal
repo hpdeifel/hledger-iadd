@@ -1,20 +1,42 @@
 name:                hledger-iadd
 version:             1.1
 synopsis:            A terminal UI as drop-in replacement for hledger add
-description:         Please see README.md
-homepage:            http://github.com/rootzlevel/hledger-iadd#readme
+description:         This is a terminal UI as drop-in replacement for hledger add.
+                     .
+                     It improves in the following ways on hledger's add command:
+                     .
+                       * Interactive as-you-type completion for
+                         account names and descriptions with optional
+                         fuzzy matching.
+                       * Integrated calculator: Amounts can be written
+                         as simple sums with real-time feedback on the
+                         result.
+                       * All actions while entering a transaction can
+                         be undone
+                       * Configurable format for date input. Instead
+                         of @y\/m\/d@ it is also possible to use other
+                         formats like the german @d.m.y@.
+
+homepage:            https://github.com/hpdeifel/hledger-iadd#readme
+bug-reports:         https://github.com/hpdeifel/hledger-iadd/issues
 license:             BSD3
 license-file:        LICENSE
-author:              Hans-Peter Deifel
-maintainer:          hpd@hpdeifel.de
+author:              Hans-Peter Deifel <hpd@hpdeifel.de>
+maintainer:          Hans-Peter Deifel <hpd@hpdeifel.de>
 copyright:           2016 Hans-Peter Deifel
 category:            Finance, Console
 build-type:          Simple
 cabal-version:       >=1.10
+tested-with:         GHC==7.10.3, GHC==8.0
                      
+extra-source-files:
+  doc/screencast.gif
+  README.md
+  ChangeLog.md
+
 source-repository head
   type: git
-  location: https://github.com/rootzlevel/hledger-iadd.git
+  location: https://github.com/hpdeifel/hledger-iadd.git
   
 library
   hs-source-dirs:      src
@@ -78,6 +100,7 @@ test-suite spec
   main-is:            Spec.hs
   other-modules:      DateParserSpec
                     , ConfigParserSpec
+                    , AmountParserSpec
   default-language:   Haskell2010
   build-depends:      base >= 4.8 && < 5
                     , hledger-iadd
