@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
 
@@ -15,6 +17,7 @@ import           Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
+import           Data.Functor.Identity
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
@@ -25,8 +28,8 @@ import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
 import           Lens.Micro
-import           Options.Applicative hiding (str, option)
 import qualified Options.Applicative as OA
+import           Options.Applicative hiding (str, option)
 import           System.Directory
 import           System.Environment.XDG.BaseDir
 import           System.Exit
@@ -261,6 +264,52 @@ setEdit content edit = edit & editContentsL .~ zipper
 addToJournal :: HL.Transaction -> FilePath -> IO ()
 addToJournal trans path = appendFile path (HL.showTransaction trans)
 
+--------------------------------------------------------------------------------
+-- Command line and config parsing
+--------------------------------------------------------------------------------
+
+data CommonOptions f = CommonOptions
+  { optLedgerFile :: f FilePath
+  , optDateFormat :: f String
+  , optMatchAlgo  :: f MatchAlgo
+  }
+
+instance Monoid (CommonOptions Maybe) where
+  mappend opt1 opt2 =
+    let opt1' = optNatTrans First opt1
+        opt2' = optNatTrans First opt2
+    in optNatTrans getFirst $ CommonOptions
+       { optLedgerFile = optLedgerFile opt1' <> optLedgerFile opt2'
+       , optDateFormat = optDateFormat opt1' <> optDateFormat opt2'
+       , optMatchAlgo = optMatchAlgo opt1' <> optMatchAlgo opt2'
+       }
+
+  mempty = CommonOptions Nothing Nothing Nothing
+
+optNatTrans :: Functor f => (forall a. f a -> g a) -> CommonOptions f -> CommonOptions g
+optNatTrans nat opts = CommonOptions
+  { optLedgerFile = nat $ optLedgerFile opts
+  , optDateFormat = nat $ optDateFormat opts
+  , optMatchAlgo = nat $ optMatchAlgo opts
+  }
+
+optFromJust :: CommonOptions Identity -> CommonOptions Maybe -> CommonOptions Identity
+optFromJust def opts =
+  optNatTrans (Identity . fromJust) ( opts <> optNatTrans (Just . runIdentity) def)
+
+data CmdLineOptions = CmdLineOptions
+  { cmdCommon :: CommonOptions Maybe
+  , cmdDumpConfig :: Bool
+  }
+
+data ConfOptions = ConfOptions { confCommon :: CommonOptions Maybe }
+
+defaultOptions :: FilePath -> CommonOptions Identity
+defaultOptions home = CommonOptions
+  { optLedgerFile = Identity (ledgerPath home)
+  , optDateFormat = Identity "[[%y/]%m/]%d"
+  , optMatchAlgo = Identity Substrings
+  }
 
 ledgerPath :: FilePath -> FilePath
 ledgerPath home = home <> "/.hledger.journal"
@@ -282,87 +331,96 @@ readMatchAlgo = eitherReader reader
       | str == "substrings" = return Substrings
       | otherwise = Left "Expected \"fuzzy\" or \"substrings\""
 
-data Options = Options
-  { optLedgerFile :: FilePath
-  , optDateFormat :: String
-  , optMatchAlgo :: MatchAlgo
-  , optDumpConfig :: Bool
-  }
-
-confParser :: FilePath -> OptParser Options
-confParser home = Options
+-- | Parser for our config file
+confParser :: CommonOptions Identity -> OptParser ConfOptions
+confParser def = fmap ConfOptions $ CommonOptions
   -- TODO Convert leading tilde to home
-  <$> option "file" (ledgerPath home) "Path to the journal file"
-  <*> option "date-format" "[[%y/]%m/]%d" "Format used to parse dates"
-  <*> customOption "completion-engine" Substrings "substrings"
+  <$> (Just <$> option "file" (runIdentity $ optLedgerFile def) "Path to the journal file")
+  <*> (Just <$> option "date-format" (runIdentity $ optDateFormat def) "Format used to parse dates")
+  <*> (Just <$> customOption "completion-engine" matchAlgo (T.toLower $ T.pack $ show matchAlgo)
       ( "Algorithm used to find completions for account names. Possible values are:\n"
       <> "  - substrings: Every word in the search string has to occur somewhere in the account name\n"
       <> "  - fuzzy: All letters from the search string have to appear in the name in the same order"
       )
       "string"
       parseMatchAlgo
-  <*> pure False
+      )
 
-parseConfigFile :: IO Options
+  where matchAlgo = runIdentity (optMatchAlgo def)
+
+-- | IO Action to read and parse config file
+parseConfigFile :: IO ConfOptions
 parseConfigFile = do
   path <- configPath
   home <- getHomeDirectory
+  let def = defaultOptions home
 
   try (T.readFile path) >>= \case
-    Left (_ :: SomeException) -> return (parserDefault $ confParser home)
-    Right res -> case parseConfig path res (confParser home) of
+    Left (_ :: SomeException) -> return (parserDefault $ confParser def)
+    Right res -> case parseConfig path res (confParser def) of
       Left err -> do
         putStr (show err)
         exitFailure
       Right res' -> return res'
 
-optionParser :: Options -> Parser Options
-optionParser def = Options
-  <$> strOption
-        (  long "file"
-        <> short 'f'
-        <> metavar "FILE"
-        <> value (optLedgerFile def)
-        <> help "Path to the journal file"
-        )
-  <*> strOption
-        (  long "date-format"
-        <> metavar "FORMAT"
-        <> value (optDateFormat def)
-        <> help "Format used to parse dates"
-        )
-  <*> OA.option readMatchAlgo
-        (  long "completion-engine"
-        <> metavar "ENGINE"
-        <> value (optMatchAlgo def)
-        <> help "Algorithm for account name completion. Possible values: \"fuzzy\", \"substrings\"")
+-- | command line option parser
+cmdOptionParser :: Parser CmdLineOptions
+cmdOptionParser = CmdLineOptions
+  <$> (CommonOptions
+       <$> OA.option (Just <$> OA.str)
+           (  long "file"
+           <> short 'f'
+           <> metavar "FILE"
+           <> value Nothing
+           <> help "Path to the journal file"
+           )
+       <*> OA.option (Just <$> OA.str)
+             (  long "date-format"
+             <> metavar "FORMAT"
+             <> value Nothing
+             <> help "Format used to parse dates"
+             )
+      <*> OA.option (Just <$> readMatchAlgo)
+            (  long "completion-engine"
+            <> metavar "ENGINE"
+            <> value Nothing
+            <> help "Algorithm for account name completion. Possible values: \"fuzzy\", \"substrings\"")
+      )
   <*> switch
         ( long "dump-default-config"
        <> help "Print an example configuration file to stdout and exit"
         )
 
+--------------------------------------------------------------------------------
+-- main
+--------------------------------------------------------------------------------
+
 main :: IO ()
 main = do
-  opts1 <- parseConfigFile
+  home <- getHomeDirectory
+  path <- configPath
+  let defOpts = defaultOptions home
 
-  opts <- execParser $ info (helper <*> optionParser opts1) $
-            fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+  cmdOpts <- execParser $ info (helper <*> cmdOptionParser) $
+               fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
 
-  when (optDumpConfig opts) $ do
-    home <- getHomeDirectory
-    path <- configPath
+  when (cmdDumpConfig cmdOpts) $ do
     T.putStrLn $ "# Write this to " <> T.pack path <> "\n"
-    T.putStrLn (parserExample $ confParser home)
+    T.putStrLn (parserExample $ confParser defOpts)
     exitSuccess
 
-  date <- case parseDateFormat (T.pack $ optDateFormat opts) of
+  confOpts <- parseConfigFile
+
+  let opts = optFromJust defOpts $ cmdCommon cmdOpts <> confCommon confOpts
+
+  date <- case parseDateFormat (T.pack $ runIdentity $ optDateFormat opts) of
     Left err -> do
       hPutStr stderr "Could not parse date format: "
       T.hPutStr stderr err
       exitWith (ExitFailure 1)
     Right res -> return res
 
-  let path = optLedgerFile opts
+  let path = runIdentity $ optLedgerFile opts
   journalContents <- T.readFile path
 
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
@@ -373,7 +431,7 @@ main = do
       sugg <- suggest journal date DateQuestion
 
       let welcome = "Welcome! Press F1 (or Alt-?) for help. Exit with Ctrl-d."
-          matchAlgo = optMatchAlgo opts
+          matchAlgo = runIdentity $ optMatchAlgo opts
           as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog
 
       void $ defaultMain app as
