@@ -22,6 +22,8 @@ matrix:
 install:
   - stack +RTS -N2 -RTS setup
   - stack +RTS -N2 -RTS build --only-snapshot
+  - stack +RTS -N2 -RTS --stack-yaml stack-7.10.yaml setup
+  - stack +RTS -N2 -RTS --stack-yaml stack-7.10.yaml build --only-snapshot
 
 script:
   - stack --version
