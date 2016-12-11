@@ -4,6 +4,7 @@ module View where
 
 import           Brick
 import           Brick.Widgets.List
+import           Brick.Widgets.WrappedText
 import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -47,3 +48,5 @@ renderItem False = txt
 numPostings :: HL.Transaction -> Int
 numPostings = length . HL.tpostings
 
+viewMessage :: Text -> Widget n
+viewMessage msg = wrappedText (if T.null msg then " " else msg)

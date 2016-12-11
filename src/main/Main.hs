@@ -9,13 +9,12 @@ import           Brick.Widgets.BetterDialog
 import           Brick.Widgets.Edit
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
-import           Graphics.Vty hiding (parseConfigFile, parseConfig, (<|>))
+import           Graphics.Vty hiding (parseConfigFile, (<|>))
 
 import           Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
-import           Data.HashMap.Strict as HM
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
@@ -97,7 +96,7 @@ draw as = case asDialog as of
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
-          <=> txt (T.strip (asMessage as) <> " ") -- TODO Add space only if message is empty
+          <=> viewMessage (asMessage as)
 
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
