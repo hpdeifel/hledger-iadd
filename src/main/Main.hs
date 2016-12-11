@@ -150,7 +150,6 @@ event as (VtyEvent ev) = case asDialog as of
     EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
     EvKey (KFun 1) [] -> continue as { asDialog = myHelpDialog }
     EvKey (KChar '?') [MMeta] -> continue as { asDialog = myHelpDialog, asMessage = "Help" }
-    EvKey (KChar 'u') [MCtrl] -> continue as { asEditor = clearEdit (asEditor as) }
     _ -> (AppState <$> handleEditorEvent ev (asEditor as)
                    <*> return (asStep as)
                    <*> return (asJournal as)
