@@ -5,7 +5,7 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.15.1
+- brick-0.15.2
 - text-zipper-0.9
 - vty-5.14
 - hledger-lib-1.0.1
