@@ -48,5 +48,7 @@ renderItem False = txt
 numPostings :: HL.Transaction -> Int
 numPostings = length . HL.tpostings
 
+-- TODO Adding " " to an empty message isn't required for vty >= 5.14
+--      => Remove this, once 5.14 becomes lower bound
 viewMessage :: Text -> Widget n
 viewMessage msg = wrappedText (if T.null msg then " " else msg)

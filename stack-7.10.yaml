@@ -5,9 +5,9 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.14
+- brick-0.15.1
 - text-zipper-0.9
-- vty-5.13
+- vty-5.14
 - hledger-lib-1.0.1
 - megaparsec-5.0.1
 resolver: lts-6.26
