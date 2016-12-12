@@ -19,11 +19,44 @@ This project improves in the following ways on hledger's `add` command:
  - Configurable format for date input. Instead of `y/m/d` it is also
    possible to use other formats like the german `d.m.y`.
 
-## Installation
-### stack
+Also see the user guide under [Usage](#usage).
 
-The easiest method would be [stack]: Install the [stack] program, `cd`
-to `hledger-iadd`s source directory and type:
+## Installation
+### Latest release
+#### stack
+
+The easiest method would be [stack]: Install the [stack] program and
+type:
+
+    stack install --resolver=nightly hledger-iadd
+
+This downloads and builds `hledger-iadd` and all it's Haskell
+dependencies. After that, it copys the resulting binary to
+`~/.local/bin`. See `stack --help` for more options. You may get asked
+to install the GHC Haskell compiler locally. To do that, type `stack
+setup`.
+
+#### cabal
+
+First, install the GHC Haskell compiler and the `cabal install`,
+`alex` and `happy` build tools, possibly from your distribution or the
+[haskell platform]. Type
+
+    cabal install --bindir ~/bin hledger-iadd
+
+to install the binary in `~/bin`.
+
+### Development version
+
+To install the development version, clone the git repository first:
+
+    git clone https://github.com/hpdeifel/hledger-iadd.git
+	cd hledger-iadd
+
+#### stack
+
+The easiest method would be [stack]: Install the [stack] program and
+type:
 
     stack install
 
@@ -32,7 +65,7 @@ To build and install all Haskell dependencies locally and install
 You may get asked to install the GHC Haskell compiler locally. To do
 that, type `stack setup`.
 
-### Cabal
+#### Cabal
 
 First, install the GHC Haskell compiler and the `cabal install`,
 `alex` and `happy` build tools, possibly from your distribution or the
