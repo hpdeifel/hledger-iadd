@@ -43,6 +43,9 @@ import           ConfigParser hiding (parseConfigFile)
 import           Model
 import           View
 
+import           Data.Version (showVersion)
+import qualified Paths_hledger_iadd as Paths
+
 data AppState = AppState
   { asEditor :: Editor Text Name
   , asStep :: Step
@@ -299,6 +302,7 @@ optFromJust def opts =
 data CmdLineOptions = CmdLineOptions
   { cmdCommon :: CommonOptions Maybe
   , cmdDumpConfig :: Bool
+  , cmdVersion :: Bool
   }
 
 data ConfOptions = ConfOptions { confCommon :: CommonOptions Maybe }
@@ -389,6 +393,10 @@ cmdOptionParser = CmdLineOptions
         ( long "dump-default-config"
        <> help "Print an example configuration file to stdout and exit"
         )
+  <*> switch
+        ( long "version"
+       <> help "Print version number and exit"
+        )
 
 --------------------------------------------------------------------------------
 -- main
@@ -402,6 +410,10 @@ main = do
 
   cmdOpts <- execParser $ info (helper <*> cmdOptionParser) $
                fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
+
+  when (cmdVersion cmdOpts) $ do
+    putStrLn $ "This is hledger-iadd version " <> showVersion Paths.version
+    exitSuccess
 
   when (cmdDumpConfig cmdOpts) $ do
     T.putStrLn $ "# Write this to " <> T.pack path <> "\n"
