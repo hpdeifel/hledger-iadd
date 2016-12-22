@@ -31,6 +31,7 @@ import           Lens.Micro
 import qualified Options.Applicative as OA
 import           Options.Applicative hiding (str, option)
 import           System.Directory
+import           System.Environment
 import           System.Environment.XDG.BaseDir
 import           System.Exit
 import           System.IO
@@ -398,9 +399,11 @@ cmdOptionParser = CmdLineOptions
        <> help "Print version number and exit"
         )
 
---------------------------------------------------------------------------------
--- main
---------------------------------------------------------------------------------
+parseEnvVariables :: IO (CommonOptions Maybe)
+parseEnvVariables = do
+  maybeFilePath <- lookupEnv "LEDGER_FILE"
+  return mempty
+    { optLedgerFile = maybeFilePath }
 
 main :: IO ()
 main = do
@@ -422,7 +425,11 @@ main = do
 
   confOpts <- parseConfigFile
 
-  let opts = optFromJust defOpts $ cmdCommon cmdOpts <> confCommon confOpts
+  envOpts <- parseEnvVariables
+
+  -- The order of precedence here is:
+  -- arguments > environment > config file
+  let opts = optFromJust defOpts $ cmdCommon cmdOpts <> envOpts <> confCommon confOpts
 
   date <- case parseDateFormat (T.pack $ runIdentity $ optDateFormat opts) of
     Left err -> do
