@@ -104,9 +104,10 @@ suggest journal _ (AccountQuestion trans) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
     else HL.paccount <$> (suggestAccountPosting journal trans)
-suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
-  if transactionBalanced trans
-    then HL.pamount <$> (findPostingByAcc account =<< findLastSimilar journal trans)
+suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $ do
+  last <- findLastSimilar journal trans
+  if transactionBalanced trans || (trans `isSubsetTransaction` last)
+    then HL.pamount <$> (findPostingByAcc account last)
     else Just $ negativeAmountSum trans
 suggest _ _ (FinalQuestion _) = return $ Just "y"
 
@@ -155,7 +156,7 @@ suggestNextPosting :: HL.Transaction -> HL.Transaction -> Maybe HL.Posting
 suggestNextPosting current reference =
   -- Postings that aren't already used in the new posting
   let unusedPostings = filter (`notContainedIn` curPostings) refPostings
-  in listToMaybe $ sortBy cmpPosting unusedPostings
+  in listToMaybe unusedPostings
 
   where [refPostings, curPostings] = map HL.tpostings [reference, current]
         notContainedIn p = not . any (((==) `on` HL.paccount) p)
@@ -192,6 +193,22 @@ suggestAccountPosting journal trans =
 -- | Return the first Posting that matches the given account name in the transaction
 findPostingByAcc :: HL.AccountName -> HL.Transaction -> Maybe HL.Posting
 findPostingByAcc account = find ((==account) . HL.paccount) . HL.tpostings
+
+-- | Returns True if the first transaction is a subset of the second one.
+--
+-- That means, all postings from the first transaction are present in the
+-- second one.
+isSubsetTransaction :: HL.Transaction -> HL.Transaction -> Bool
+isSubsetTransaction current origin =
+  let
+    origPostings = HL.tpostings origin
+    currPostings = HL.tpostings current
+  in
+    null (deleteFirstsBy cmpPosting currPostings origPostings)
+  where
+    cmpPosting a b =  HL.paccount a == HL.paccount b
+                   && HL.pamount a  == HL.pamount b
+
 
 listToMaybe' :: [a] -> Maybe [a]
 listToMaybe' [] = Nothing
