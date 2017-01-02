@@ -105,10 +105,13 @@ suggest journal _ (AccountQuestion trans) = return $
     then Nothing
     else HL.paccount <$> (suggestAccountPosting journal trans)
 suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $ do
-  last <- findLastSimilar journal trans
-  if transactionBalanced trans || (trans `isSubsetTransaction` last)
-    then HL.pamount <$> (findPostingByAcc account last)
-    else Just $ negativeAmountSum trans
+  case findLastSimilar journal trans of
+    Nothing -> Just $ negativeAmountSum trans
+    Just last
+      | transactionBalanced trans || (trans `isSubsetTransaction` last)
+        -> HL.pamount <$> (findPostingByAcc account last)
+      | otherwise
+        -> Just $ negativeAmountSum trans
 suggest _ _ (FinalQuestion _) = return $ Just "y"
 
 -- | Returns true if the pattern is not empty and all of its words occur in the string
