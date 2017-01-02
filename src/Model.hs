@@ -106,7 +106,11 @@ suggest journal _ (AccountQuestion trans) = return $
     else HL.paccount <$> (suggestAccountPosting journal trans)
 suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $ do
   case findLastSimilar journal trans of
-    Nothing -> Just $ negativeAmountSum trans
+    Nothing
+      | null (HL.tpostings trans)
+        -> Nothing  -- Don't suggest an amount for first account
+      | otherwise
+        -> Just $ negativeAmountSum trans
     Just last
       | transactionBalanced trans || (trans `isSubsetTransaction` last)
         -> HL.pamount <$> (findPostingByAcc account last)

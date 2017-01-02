@@ -56,11 +56,18 @@ suggestSpec = do
 
       suggest j german (AmountQuestion "y" t) `shouldReturn` (Just "€-3.00")
 
-    it "suggests the balancing amount if there is no similar transaction" $ do
+    it "initially doesn't suggest an amount if there is no similar transaction" $ do
+      let j = mkJournal [ ((2017, 1, 1), "Foo", [("x", 2), ("y", 3)]) ]
+          t = mkTransaction ((2016, 1, 1), "Bar", [])
+
+      suggest j german (AmountQuestion "y" t) `shouldReturn` Nothing
+
+    it "suggests the balancing amount if there is no similar transaction for the second account" $ do
       let j = mkJournal [ ((2017, 1, 1), "Foo", [("x", 2), ("y", 3)]) ]
           t = mkTransaction ((2016, 1, 1), "Bar", [("foo", 3)])
 
       suggest j german (AmountQuestion "y" t) `shouldReturn` (Just "€-3.00")
+
 
 -- Helpers
 
