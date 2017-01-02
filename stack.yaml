@@ -7,4 +7,5 @@ extra-deps:
 - text-zipper-0.9
 - vty-5.14
 - haskell-src-exts-1.19.0
+- hledger-lib-1.1
 resolver: lts-7.9
