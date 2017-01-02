@@ -160,8 +160,6 @@ suggestNextPosting current reference =
 
   where [refPostings, curPostings] = map HL.tpostings [reference, current]
         notContainedIn p = not . any (((==) `on` HL.paccount) p)
-        -- Sort descending by amount. This way, negative amounts rank last
-        cmpPosting = compare `on` (Down . HL.pamount)
 
 -- | Given the last transaction entered, suggest the likely most comparable posting
 --
