@@ -1,3 +1,11 @@
+# 1.1.2
+
+ - Respect ${LEDGER_FILE} environment variable
+ - Add --version command
+ - Bump brick dependency to 0.15.2
+ - Bump hledger-lib dependency to 1.1
+ - Bind C-u to 'delete to beginning of line'
+
 # 1.1.1
 
  - bugfix: Show cursor in empty entry widget
