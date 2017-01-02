@@ -104,10 +104,18 @@ suggest journal _ (AccountQuestion trans) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
     else HL.paccount <$> (suggestAccountPosting journal trans)
-suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $
-  if transactionBalanced trans
-    then HL.pamount <$> (findPostingByAcc account =<< findLastSimilar journal trans)
-    else Just $ negativeAmountSum trans
+suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $ do
+  case findLastSimilar journal trans of
+    Nothing
+      | null (HL.tpostings trans)
+        -> Nothing  -- Don't suggest an amount for first account
+      | otherwise
+        -> Just $ negativeAmountSum trans
+    Just last
+      | transactionBalanced trans || (trans `isSubsetTransaction` last)
+        -> HL.pamount <$> (findPostingByAcc account last)
+      | otherwise
+        -> Just $ negativeAmountSum trans
 suggest _ _ (FinalQuestion _) = return $ Just "y"
 
 -- | Returns true if the pattern is not empty and all of its words occur in the string
@@ -155,12 +163,10 @@ suggestNextPosting :: HL.Transaction -> HL.Transaction -> Maybe HL.Posting
 suggestNextPosting current reference =
   -- Postings that aren't already used in the new posting
   let unusedPostings = filter (`notContainedIn` curPostings) refPostings
-  in listToMaybe $ sortBy cmpPosting unusedPostings
+  in listToMaybe unusedPostings
 
   where [refPostings, curPostings] = map HL.tpostings [reference, current]
         notContainedIn p = not . any (((==) `on` HL.paccount) p)
-        -- Sort descending by amount. This way, negative amounts rank last
-        cmpPosting = compare `on` (Down . HL.pamount)
 
 -- | Given the last transaction entered, suggest the likely most comparable posting
 --
@@ -192,6 +198,22 @@ suggestAccountPosting journal trans =
 -- | Return the first Posting that matches the given account name in the transaction
 findPostingByAcc :: HL.AccountName -> HL.Transaction -> Maybe HL.Posting
 findPostingByAcc account = find ((==account) . HL.paccount) . HL.tpostings
+
+-- | Returns True if the first transaction is a subset of the second one.
+--
+-- That means, all postings from the first transaction are present in the
+-- second one.
+isSubsetTransaction :: HL.Transaction -> HL.Transaction -> Bool
+isSubsetTransaction current origin =
+  let
+    origPostings = HL.tpostings origin
+    currPostings = HL.tpostings current
+  in
+    null (deleteFirstsBy cmpPosting currPostings origPostings)
+  where
+    cmpPosting a b =  HL.paccount a == HL.paccount b
+                   && HL.pamount a  == HL.pamount b
+
 
 listToMaybe' :: [a] -> Maybe [a]
 listToMaybe' [] = Nothing
