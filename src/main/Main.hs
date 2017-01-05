@@ -8,7 +8,7 @@ module Main where
 import           Brick
 import           Brick.Widgets.Border
 import           Brick.Widgets.BetterDialog
-import           Brick.Widgets.Edit
+import           Brick.Widgets.Edit.EmacsBindings
 import           Brick.Widgets.List
 import           Brick.Widgets.List.Utils
 import           Graphics.Vty hiding (parseConfigFile, (<|>))
