@@ -21,6 +21,11 @@ import           Data.Text.Zipper.Generic.Words
 --
 --  - Ctrl-f: Move forward one character
 --  - Ctrl-b: Move backward one character
+--  - Alt-f: Move forward one word
+--  - Alt-b: Move backward one word
+--  - Alt-Backspace: Delete the previous word
+--  - Ctrl-w: Delete the previous word
+--  - Alt-d: Delete the next word
 handleEditorEvent :: (Eq t, GenericTextZipper t) => Event -> Editor t n -> EventM n (Editor t n)
 handleEditorEvent event edit = case event of
   EvKey (KChar 'f') [MCtrl] -> return $ applyEdit moveRight edit
@@ -28,4 +33,9 @@ handleEditorEvent event edit = case event of
 
   EvKey (KChar 'f') [MMeta] -> return $ applyEdit moveWordRight edit
   EvKey (KChar 'b') [MMeta] -> return $ applyEdit moveWordLeft edit
+
+  EvKey KBS         [MMeta] -> return $ applyEdit deletePrevWord edit
+  EvKey (KChar 'w') [MCtrl] -> return $ applyEdit deletePrevWord edit
+  EvKey (KChar 'd') [MMeta] -> return $ applyEdit deleteWord edit
+
   _ -> E.handleEditorEvent event edit

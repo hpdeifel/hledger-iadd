@@ -18,6 +18,8 @@ spec :: Spec
 spec = do
   moveWordLeftSpec
   moveWordRightSpec
+  deletePrevWordSpec
+  deleteWordSpec
 
 moveWordLeftSpec :: Spec
 moveWordLeftSpec = describe "moveWordLeft" $ do
@@ -71,6 +73,34 @@ moveWordRightSpec = describe "moveWordRight" $ do
   it "always lands at the end of a word" $ property $ \(textlist :: [Text]) cursor ->
     isAtWordEnd (moveWordRight (zipLoc textlist cursor))
 
+deletePrevWordSpec :: Spec
+deletePrevWordSpec = describe "deletePrevWord" $ do
+  it "does the same cursor movement as moveWordLeft" $ property $ \(textlist :: [Text]) cursor ->
+    let zip = zipLoc textlist cursor
+    in deletePrevWord zip `isAt` (cursorPosition (moveWordLeft zip))
+
+  it "has the same prefix than moveWordLeft" $ property $ \textlist cursor ->
+    let zip = zipLoc textlist cursor
+    in deleteToEnd (deletePrevWord zip) === deleteToEnd (moveWordLeft zip)
+
+  it "has the same suffix than before" $ property $ \textlist cursor ->
+    let zip = zipLoc textlist cursor
+    in deleteToBeginning (deletePrevWord zip) === deleteToBeginning zip
+
+deleteWordSpec :: Spec
+deleteWordSpec = describe "deleteWord" $ do
+  it "does no cursor movement" $ property $ \textlist cursor ->
+    let zip = zipLoc textlist cursor
+    in deleteWord zip `isAt` cursorPosition zip
+
+  it "has the same prefix than before" $ property $ \textlist cursor ->
+    let zip = zipLoc textlist cursor
+    in deleteToEnd (deleteWord zip) === deleteToEnd zip
+
+  it "has the same suffix than moveWordRight" $ property $ \textlist cursor ->
+    let zip = zipLoc textlist cursor
+    in deleteToBeginning (deleteWord zip) === deleteToBeginning (moveWordRight zip)
+
 -- Helpers
 
 -- | Creates a zipper with initial content and cursor location
@@ -101,6 +131,23 @@ isAtWordStart zipper = counterexample (show zipper) $
     (row == 0 && col == 0)
     || ((col == 0 || isSpace (T.index curLine (col-1))) -- previous is space
        && (col == T.length curLine || not (isSpace (T.index curLine col)))) -- next is word
+
+-- | Delete to the very end of a zipper
+deleteToEnd :: TextZipper Text -> TextZipper Text
+deleteToEnd zipper =
+  let
+    (row, _) = cursorPosition zipper
+    numLines = length (getText zipper)
+  in
+    if row == numLines-1 then
+      killToEOL zipper
+    else
+      deleteToEnd (deleteChar (killToEOL zipper))
+
+deleteToBeginning :: TextZipper Text -> TextZipper Text
+deleteToBeginning zipper = case cursorPosition zipper of
+  (0, _) -> killToBOL zipper
+  _      -> deleteToBeginning (deletePrevChar (killToBOL zipper))
 
 instance Arbitrary Text where
   arbitrary = T.pack <$> arbitrary

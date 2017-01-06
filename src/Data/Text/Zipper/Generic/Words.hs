@@ -5,6 +5,8 @@
 module Data.Text.Zipper.Generic.Words
   ( moveWordLeft
   , moveWordRight
+  , deletePrevWord
+  , deleteWord
   ) where
 
 import           Data.Char
@@ -18,18 +20,25 @@ import qualified Data.Text.Zipper.Generic as TZ
 -- function always leaves the cursor at the beginning of a word (except at the
 -- very start of the text).
 moveWordLeft :: TZ.GenericTextZipper a => TextZipper a -> TextZipper a
-moveWordLeft = moveWordLeft' False
+moveWordLeft = doWordLeft False moveLeft
 
-moveWordLeft' :: TZ.GenericTextZipper a => Bool -> TextZipper a -> TextZipper a
-moveWordLeft' inWord zipper = case charToTheLeft zipper of
+-- | Delete the previous word
+--
+-- Does the same as 'moveWordLeft' but deletes characters instead of simply
+-- moving past them.
+deletePrevWord :: (Eq a, TZ.GenericTextZipper a) => TextZipper a -> TextZipper a
+deletePrevWord = doWordLeft False deletePrevChar
+
+doWordLeft :: TZ.GenericTextZipper a => Bool -> (TextZipper a -> TextZipper a) -> TextZipper a -> TextZipper a
+doWordLeft inWord transform zipper = case charToTheLeft zipper of
   Nothing -> zipper  -- start of text
   Just c
     | isSpace c && not inWord
-      -> moveWordLeft' False (moveLeft zipper)
+      -> doWordLeft False transform (transform zipper)
     | not (isSpace c) && not inWord
-      -> moveWordLeft' True zipper -- switch to skipping letters
+      -> doWordLeft True transform zipper -- switch to skipping letters
     | not (isSpace c) && inWord
-      -> moveWordLeft' True (moveLeft zipper)
+      -> doWordLeft True transform (transform zipper)
     | otherwise
       -> zipper -- Done
 
@@ -39,18 +48,25 @@ moveWordLeft' inWord zipper = case charToTheLeft zipper of
 -- function always leaves the cursor at the end of a word (except at the very
 -- end of the text).
 moveWordRight :: TZ.GenericTextZipper a => TextZipper a -> TextZipper a
-moveWordRight = moveWordRight' False
+moveWordRight = doWordRight False moveRight
 
-moveWordRight' :: TZ.GenericTextZipper a => Bool -> TextZipper a -> TextZipper a
-moveWordRight' inWord zipper = case charToTheRight zipper of
+-- | Delete the next word
+--
+-- Does the same as 'moveWordRight' but deletes characters instead of simply
+-- moving past them.
+deleteWord :: TZ.GenericTextZipper a => TextZipper a -> TextZipper a
+deleteWord = doWordRight False deleteChar
+
+doWordRight :: TZ.GenericTextZipper a => Bool -> (TextZipper a -> TextZipper a) -> TextZipper a -> TextZipper a
+doWordRight inWord transform zipper = case charToTheRight zipper of
   Nothing -> zipper -- end of text
   Just c
     | isSpace c && not inWord
-      -> moveWordRight' False (moveRight zipper)
+      -> doWordRight False transform (transform zipper)
     | not (isSpace c) && not inWord
-      -> moveWordRight' True zipper -- switch to skipping letters
+      -> doWordRight True transform zipper -- switch to skipping letters
     | not (isSpace c) && inWord
-      -> moveWordRight' True (moveRight zipper)
+      -> doWordRight True transform (transform zipper)
     | otherwise
       -> zipper -- Done
 
