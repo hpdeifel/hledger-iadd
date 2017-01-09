@@ -1,3 +1,9 @@
+# 1.1.3
+
+  - Add more emacs/readline like keybindings in entry field (`C-f`/`C-b`,
+    `M-f`/`M-b`, `M-Del`/`C-w`, `M-d`)
+  - Fix account suggestion order to be more like `hledger add`
+
 # 1.1.2
 
  - Respect ${LEDGER_FILE} environment variable
