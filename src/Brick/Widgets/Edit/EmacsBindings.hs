@@ -38,4 +38,7 @@ handleEditorEvent event edit = case event of
   EvKey (KChar 'w') [MCtrl] -> return $ applyEdit deletePrevWord edit
   EvKey (KChar 'd') [MMeta] -> return $ applyEdit deleteWord edit
 
+  EvKey KHome       []      -> return $ applyEdit gotoBOL edit
+  EvKey KEnd        []      -> return $ applyEdit gotoEOL edit
+
   _ -> E.handleEditorEvent event edit
