@@ -19,6 +19,7 @@ import           Model hiding (context)
 spec :: Spec
 spec = do
   describe "suggest" suggestSpec
+  describe "accountsByFrequency" accByFreqSpec
 
 
 suggestSpec :: Spec
@@ -67,6 +68,23 @@ suggestSpec = do
           t = mkTransaction ((2016, 1, 1), "Bar", [("foo", 3)])
 
       suggest j german (AmountQuestion "y" t) `shouldReturn` (Just "€-3.00")
+
+
+accByFreqSpec :: Spec
+accByFreqSpec = do
+  it "sorts according to frequency" $ do
+    let postings = [("x", 1), ("y", 2), ("y", 3)]
+        j = mkJournal [ ((2017, 1, 1), "Foo", postings) ]
+
+    accountsByFrequency j `shouldBe` ["y", "x"]
+
+  it "includes subaccounts" $ do
+    let j = mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]
+    accountsByFrequency j `shouldContain` ["x"]
+
+  it "only counts explicit occurences for sorting" $ do
+    let j = mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2), ("x:y", 3), ("x:z", 4)]) ]
+    accountsByFrequency j `shouldBe` ["x:y", "x:z", "x"]
 
 
 -- Helpers

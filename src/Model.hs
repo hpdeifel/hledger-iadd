@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase, OverloadedStrings #-}
 
 module Model
@@ -8,6 +9,9 @@ module Model
        , undo
        , context
        , suggest
+
+       -- * Helpers exported for easier testing
+       , accountsByFrequency
        ) where
 
 import           Data.Function
@@ -87,7 +91,7 @@ context j matchAlgo _ entryText (DescriptionQuestion _) = return $
   let descs = HL.journalDescriptions j
   in sortBy (descUses j) $ filter (matches matchAlgo entryText) descs
 context j matchAlgo _ entryText (AccountQuestion _) = return $
-  let names = HL.journalAccountNames j
+  let names = accountsByFrequency j
   in  filter (matches matchAlgo entryText) names
 context journal _ _ entryText (AmountQuestion _ _) = return $
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount journal entryText
@@ -243,6 +247,23 @@ descUses journal = compare `on` (Down . flip HM.lookup usesMap)
         -- Add one to the current count of this element
         count :: Text -> HM.HashMap Text (Sum Int) -> HM.HashMap Text (Sum Int)
         count = HM.alter (<> Just 1)
+
+-- | All accounts occuring in the journal sorted in descending order of
+-- appearance.
+accountsByFrequency :: HL.Journal -> [HL.AccountName]
+accountsByFrequency journal =
+  let
+    accounts = map HL.paccount (HL.journalPostings journal)
+    frequencyMap :: HM.HashMap HL.AccountName Int = foldr insertOrPlusOne HM.empty accounts
+    mapWithSubaccounts = foldr insertIfNotPresent frequencyMap (subaccounts frequencyMap)
+  in
+    map fst (sortBy (compare `on` (Down . snd)) (HM.toList mapWithSubaccounts))
+
+
+  where
+    insertOrPlusOne = HM.alter (Just . maybe 1 (+1))
+    insertIfNotPresent account = HM.insertWith (flip const) account 0
+    subaccounts m = HL.expandAccountNames (HM.keys m)
 
 fromEither :: Either a a -> a
 fromEither = either id id
