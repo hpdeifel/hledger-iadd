@@ -11,6 +11,8 @@ module Model
        , suggest
        , setCurrentComment
        , getCurrentComment
+       , setTransactionComment
+       , getTransactionComment
 
        -- * Helpers exported for easier testing
        , accountsByFrequency
@@ -142,6 +144,24 @@ setCurrentComment comment step = case step of
   DescriptionQuestion date _ -> DescriptionQuestion date comment
   AccountQuestion trans _ -> AccountQuestion trans comment
   AmountQuestion trans name _ -> AmountQuestion trans name comment
+  FinalQuestion trans -> FinalQuestion trans { HL.tcomment = comment }
+
+getTransactionComment :: Step -> Comment
+getTransactionComment step = case step of
+  DateQuestion c -> c
+  DescriptionQuestion _ c -> c
+  AccountQuestion trans _ -> HL.tcomment trans
+  AmountQuestion _ trans _ -> HL.tcomment trans
+  FinalQuestion trans -> HL.tcomment trans
+
+setTransactionComment :: Comment -> Step -> Step
+setTransactionComment comment step = case step of
+  DateQuestion _ -> DateQuestion comment
+  DescriptionQuestion date _ -> DescriptionQuestion date comment
+  AccountQuestion trans comment' ->
+    AccountQuestion (trans { HL.tcomment = comment }) comment'
+  AmountQuestion name trans comment' ->
+    AmountQuestion name (trans { HL.tcomment = comment }) comment'
   FinalQuestion trans -> FinalQuestion trans { HL.tcomment = comment }
 
 -- | Returns true if the pattern is not empty and all of its words occur in the string

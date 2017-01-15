@@ -147,6 +147,8 @@ event as (VtyEvent ev) = case asDialog as of
     EvKey (KChar '\t') [] -> continue (insertSelected as)
     EvKey (KChar ';') [] -> continue as { asStep = setCurrentComment "Test" (asStep as) }
     EvKey (KChar ';') [MMeta] -> continue as { asStep = setCurrentComment "" (asStep as) }
+    EvKey (KChar ':') [] -> continue as { asStep = setTransactionComment "Foobar" (asStep as) }
+    EvKey (KChar ':') [MMeta] -> continue as { asStep = setTransactionComment "" (asStep as) }
     EvKey KEsc [] -> case asStep as of
       DateQuestion _
         | T.null (editText as) -> halt as
