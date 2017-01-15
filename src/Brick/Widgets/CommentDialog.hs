@@ -20,8 +20,6 @@ import           Data.Text (Text)
 
 import Brick.Widgets.Edit.EmacsBindings
 
-import Debug.Trace
-
 data CommentWidget n = CommentWidget
   { origComment :: Text
   , textArea :: Editor Text n
@@ -64,7 +62,7 @@ renderCommentWidget widget =
     vCenterLayer $ vLimit height $ renderDialog (dialogWidget widget) textArea'
 
 commentDialogComment :: CommentWidget n -> Text
-commentDialogComment = T.intercalate "\n" . traceShowId . getEditContents . textArea
+commentDialogComment = T.intercalate "\n" . getEditContents . textArea
 
 gotoEnd :: Monoid a => TextZipper a -> TextZipper a
 gotoEnd zipper =

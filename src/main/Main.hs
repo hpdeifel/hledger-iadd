@@ -91,6 +91,8 @@ bindings = KeyBindings
        , ("C-p", "Select the previous context item")
        , ("Tab", "Insert currently selected answer into text area")
        , ("C-z", "Undo")
+       , (";", "Edit comment for current prompt")
+       , ("Alt-;", "Edit transaction comment")
        ])
   , ("Acceptance",
      [ ("Ret", "Accept the currently selected answer")
