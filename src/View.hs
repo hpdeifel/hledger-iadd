@@ -1,6 +1,12 @@
 {-# LANGUAGE LambdaCase, OverloadedStrings #-}
 
-module View where
+module View
+  ( viewState
+  , viewQuestion
+  , viewContext
+  , viewSuggestion
+  , viewMessage
+  ) where
 
 import           Brick
 import           Brick.Widgets.List

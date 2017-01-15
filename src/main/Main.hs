@@ -39,6 +39,7 @@ import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Text as P
 
 import           Brick.Widgets.HelpMessage
+import           Brick.Widgets.CommentDialog
 import           DateParser
 import           ConfigParser hiding (parseConfigFile)
 import           Model
@@ -60,13 +61,22 @@ data AppState = AppState
   , asDialog :: DialogShown
   }
 
-data Name = HelpName | ListName | EditorName
+data Name = HelpName | ListName | EditorName | CommentName
   deriving (Ord, Show, Eq)
 
-data DialogShown = NoDialog | HelpDialog (HelpWidget Name) | QuitDialog | AbortDialog
+data CommentType = TransactionComment | CurrentComment
+
+data DialogShown = NoDialog
+                 | HelpDialog (HelpWidget Name)
+                 | QuitDialog
+                 | AbortDialog
+                 | CommentDialog CommentType (CommentWidget Name)
 
 myHelpDialog :: DialogShown
 myHelpDialog = HelpDialog (helpWidget HelpName bindings)
+
+myCommentDialog :: CommentType -> Text -> DialogShown
+myCommentDialog typ comment = CommentDialog typ (commentWidget CommentName comment)
 
 bindings :: KeyBindings
 bindings = KeyBindings
@@ -92,6 +102,7 @@ draw as = case asDialog as of
   HelpDialog h -> [renderHelpWidget h, ui]
   QuitDialog -> [quitDialog, ui]
   AbortDialog -> [abortDialog, ui]
+  CommentDialog _ c -> [renderCommentWidget c, ui]
   NoDialog -> [ui]
 
   where ui =  viewState (asStep as)
@@ -107,6 +118,10 @@ draw as = case asDialog as of
 
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
+
+setComment :: CommentType -> Text -> Step -> Step
+setComment TransactionComment = setTransactionComment
+setComment CurrentComment     = setCurrentComment
 
 -- TODO Refactor to remove code duplication in individual case statements
 event :: AppState -> BrickEvent Name Event -> EventM Name (Next AppState)
@@ -129,6 +144,16 @@ event as (VtyEvent ev) = case asDialog as of
         liftIO (reset as { asDialog = NoDialog }) >>= continue
       | otherwise -> continue as { asDialog = NoDialog }
     _ -> continue as
+  CommentDialog typ dia -> handleCommentEvent ev dia >>= \case
+    CommentContinue dia' ->
+      continue as { asDialog = CommentDialog typ dia'
+                  , asStep = setComment typ (commentDialogComment dia') (asStep as)
+                  }
+    CommentFinished comment ->
+      continue as { asDialog = NoDialog
+                  , asStep = setComment typ comment (asStep as)
+                  }
+
   NoDialog -> case ev of
     EvKey (KChar 'c') [MCtrl] -> case asStep as of
       DateQuestion _ -> halt as
@@ -145,10 +170,10 @@ event as (VtyEvent ev) = case asDialog as of
     EvKey KUp [] -> continue as { asContext = listMoveUp $ asContext as
                                , asMessage = ""}
     EvKey (KChar '\t') [] -> continue (insertSelected as)
-    EvKey (KChar ';') [] -> continue as { asStep = setCurrentComment "Test" (asStep as) }
-    EvKey (KChar ';') [MMeta] -> continue as { asStep = setCurrentComment "" (asStep as) }
-    EvKey (KChar ':') [] -> continue as { asStep = setTransactionComment "Foobar" (asStep as) }
-    EvKey (KChar ':') [MMeta] -> continue as { asStep = setTransactionComment "" (asStep as) }
+    EvKey (KChar ';') [] ->
+      continue as { asDialog = myCommentDialog CurrentComment (getCurrentComment (asStep as)) }
+    EvKey (KChar ';') [MMeta] ->
+      continue as { asDialog = myCommentDialog TransactionComment (getTransactionComment (asStep as)) }
     EvKey KEsc [] -> case asStep as of
       DateQuestion _
         | T.null (editText as) -> halt as
