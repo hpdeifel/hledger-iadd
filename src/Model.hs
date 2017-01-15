@@ -9,6 +9,8 @@ module Model
        , undo
        , context
        , suggest
+       , setCurrentComment
+       , getCurrentComment
 
        -- * Helpers exported for easier testing
        , accountsByFrequency
@@ -28,10 +30,12 @@ import qualified Hledger as HL
 import           AmountParser
 import           DateParser
 
-data Step = DateQuestion
-          | DescriptionQuestion Day
-          | AccountQuestion HL.Transaction
-          | AmountQuestion HL.AccountName HL.Transaction
+type Comment = Text
+
+data Step = DateQuestion Comment
+          | DescriptionQuestion Day Comment
+          | AccountQuestion HL.Transaction Comment
+          | AmountQuestion HL.AccountName HL.Transaction Comment
           | FinalQuestion HL.Transaction
           deriving (Eq, Show)
 
@@ -45,55 +49,57 @@ data MatchAlgo = Fuzzy | Substrings
 
 nextStep :: HL.Journal -> DateFormat -> Either Text Text -> Step -> IO (Either Text MaybeStep)
 nextStep journal dateFormat entryText current = case current of
-  DateQuestion ->
-    fmap (Step . DescriptionQuestion) <$> either (parseDateWithToday dateFormat)
-                                                 parseHLDateWithToday
-                                                 entryText
-  DescriptionQuestion day -> return $ Right $ Step $
+  DateQuestion comment ->
+    fmap (Step . flip DescriptionQuestion comment)
+       <$> either (parseDateWithToday dateFormat) parseHLDateWithToday entryText
+
+  DescriptionQuestion day comment -> return $ Right $ Step $
     AccountQuestion HL.nulltransaction { HL.tdate = day
                                        , HL.tdescription = (fromEither entryText)
+                                       , HL.tcomment = comment
                                        }
-  AccountQuestion trans
+                                       "" -- empty comment
+  AccountQuestion trans comment
     | T.null (fromEither entryText) && transactionBalanced trans
       -> return $ Right $ Step $ FinalQuestion trans
     | T.null (fromEither entryText)  -- unbalanced
       -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
-      AmountQuestion (fromEither entryText) trans
-  AmountQuestion name trans -> case parseAmount journal (fromEither entryText) of
+      AmountQuestion (fromEither entryText) trans comment
+  AmountQuestion name trans comment -> case parseAmount journal (fromEither entryText) of
     Left err -> return $ Left (T.pack err)
     Right amount -> return $ Right $ Step $
-      let newPosting = post' name amount
-      in AccountQuestion (addPosting newPosting trans)
+      let newPosting = post' name amount comment
+      in AccountQuestion (addPosting newPosting trans) ""
 
   FinalQuestion trans
     | fromEither entryText == "y" -> return $ Right $ Finished trans
-    | otherwise -> return $ Right $ Step $ AccountQuestion trans
+    | otherwise -> return $ Right $ Step $ AccountQuestion trans ""
 
 -- | Reverses the last step.
 --
 -- Returns (Left errorMessage), if the step can't be reversed
 undo :: Step -> Either Text Step
 undo current = case current of
-  DateQuestion -> Left "Already at oldest step in current transaction"
-  DescriptionQuestion _ -> return DateQuestion
-  AccountQuestion trans -> return $ case HL.tpostings trans of
-    []     -> DescriptionQuestion (HL.tdate trans)
-    ps -> AmountQuestion (HL.paccount (last ps)) trans { HL.tpostings = init ps }
-  AmountQuestion _ trans -> Right $ AccountQuestion trans
-  FinalQuestion trans -> undo (AccountQuestion trans)
+  DateQuestion _ -> Left "Already at oldest step in current transaction"
+  DescriptionQuestion _ comment -> return (DateQuestion comment)
+  AccountQuestion trans _ -> return $ case HL.tpostings trans of
+    []     -> DescriptionQuestion (HL.tdate trans) (HL.tcomment trans)
+    ps -> AmountQuestion (HL.paccount (last ps)) trans { HL.tpostings = init ps } (HL.pcomment (last ps))
+  AmountQuestion _ trans comment -> Right $ AccountQuestion trans comment
+  FinalQuestion trans -> undo (AccountQuestion trans "")
 
 context :: HL.Journal -> MatchAlgo -> DateFormat -> Text -> Step -> IO [Text]
-context _ _ dateFormat entryText DateQuestion = parseDateWithToday dateFormat entryText >>= \case
+context _ _ dateFormat entryText (DateQuestion _) = parseDateWithToday dateFormat entryText >>= \case
   Left _ -> return []
   Right date -> return [T.pack $ HL.showDate date]
-context j matchAlgo _ entryText (DescriptionQuestion _) = return $
+context j matchAlgo _ entryText (DescriptionQuestion _ _) = return $
   let descs = HL.journalDescriptions j
   in sortBy (descUses j) $ filter (matches matchAlgo entryText) descs
-context j matchAlgo _ entryText (AccountQuestion _) = return $
+context j matchAlgo _ entryText (AccountQuestion _ _) = return $
   let names = accountsByFrequency j
   in  filter (matches matchAlgo entryText) names
-context journal _ _ entryText (AmountQuestion _ _) = return $
+context journal _ _ entryText (AmountQuestion _ _ _) = return $
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount journal entryText
 context _ _ _ _  (FinalQuestion _) = return []
 
@@ -101,14 +107,14 @@ context _ _ _ _  (FinalQuestion _) = return []
 --
 -- For example, it suggests today for the date prompt
 suggest :: HL.Journal -> DateFormat -> Step -> IO (Maybe Text)
-suggest _ dateFormat DateQuestion =
+suggest _ dateFormat (DateQuestion _) =
   Just . printDate dateFormat . utctDay <$> getCurrentTime
-suggest _ _ (DescriptionQuestion _) = return Nothing
-suggest journal _ (AccountQuestion trans) = return $
+suggest _ _ (DescriptionQuestion _ _) = return Nothing
+suggest journal _ (AccountQuestion trans _) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
     else HL.paccount <$> (suggestAccountPosting journal trans)
-suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.showMixedAmount) $ do
+suggest journal _ (AmountQuestion account trans _) = return $ fmap (T.pack . HL.showMixedAmount) $ do
   case findLastSimilar journal trans of
     Nothing
       | null (HL.tpostings trans)
@@ -121,6 +127,22 @@ suggest journal _ (AmountQuestion account trans) = return $ fmap (T.pack . HL.sh
       | otherwise
         -> Just $ negativeAmountSum trans
 suggest _ _ (FinalQuestion _) = return $ Just "y"
+
+getCurrentComment :: Step -> Comment
+getCurrentComment step = case step of
+  DateQuestion c -> c
+  DescriptionQuestion _ c -> c
+  AccountQuestion _ c -> c
+  AmountQuestion _ _ c -> c
+  FinalQuestion trans -> HL.tcomment trans
+
+setCurrentComment :: Comment -> Step -> Step
+setCurrentComment comment step = case step of
+  DateQuestion _ -> DateQuestion comment
+  DescriptionQuestion date _ -> DescriptionQuestion date comment
+  AccountQuestion trans _ -> AccountQuestion trans comment
+  AmountQuestion trans name _ -> AmountQuestion trans name comment
+  FinalQuestion trans -> FinalQuestion trans { HL.tcomment = comment }
 
 -- | Returns true if the pattern is not empty and all of its words occur in the string
 --
@@ -148,10 +170,12 @@ fuzzyMatch query (part : partsRest) = case (T.uncons query) of
         | c == c2 -> fuzzyMatch queryRest (partRest : partsRest)
         | otherwise -> False
 
-post' :: HL.AccountName -> HL.MixedAmount -> HL.Posting
-post' account amount = HL.nullposting { HL.paccount = account
-                                      , HL.pamount = amount
-                                      }
+post' :: HL.AccountName -> HL.MixedAmount -> Comment -> HL.Posting
+post' account amount comment = HL.nullposting
+  { HL.paccount = account
+  , HL.pamount = amount
+  , HL.pcomment = comment
+  }
 
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
 addPosting p t = t { HL.tpostings = (HL.tpostings t) ++ [p] }
