@@ -1,3 +1,9 @@
+# 1.1.4
+
+  - Sort account names by frequency for completion
+  - Bind Home/End im entry field
+  - Bump brick and vty dependencies
+
 # 1.1.3
 
   - Add more emacs/readline like keybindings in entry field (`C-f`/`C-b`,
