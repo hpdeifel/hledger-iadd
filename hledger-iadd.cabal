@@ -50,6 +50,7 @@ library
                      , ConfigParser
                      , Brick.Widgets.List.Utils
                      , Brick.Widgets.HelpMessage
+                     , Brick.Widgets.CommentDialog
                      , Brick.Widgets.BetterDialog
                      , Brick.Widgets.WrappedText
                      , Brick.Widgets.Edit.EmacsBindings

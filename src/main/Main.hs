@@ -39,6 +39,7 @@ import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Text as P
 
 import           Brick.Widgets.HelpMessage
+import           Brick.Widgets.CommentDialog
 import           DateParser
 import           ConfigParser hiding (parseConfigFile)
 import           Model
@@ -60,13 +61,22 @@ data AppState = AppState
   , asDialog :: DialogShown
   }
 
-data Name = HelpName | ListName | EditorName
+data Name = HelpName | ListName | EditorName | CommentName
   deriving (Ord, Show, Eq)
 
-data DialogShown = NoDialog | HelpDialog (HelpWidget Name) | QuitDialog | AbortDialog
+data CommentType = TransactionComment | CurrentComment
+
+data DialogShown = NoDialog
+                 | HelpDialog (HelpWidget Name)
+                 | QuitDialog
+                 | AbortDialog
+                 | CommentDialog CommentType (CommentWidget Name)
 
 myHelpDialog :: DialogShown
 myHelpDialog = HelpDialog (helpWidget HelpName bindings)
+
+myCommentDialog :: CommentType -> Text -> DialogShown
+myCommentDialog typ comment = CommentDialog typ (commentWidget CommentName comment)
 
 bindings :: KeyBindings
 bindings = KeyBindings
@@ -81,6 +91,8 @@ bindings = KeyBindings
        , ("C-p", "Select the previous context item")
        , ("Tab", "Insert currently selected answer into text area")
        , ("C-z", "Undo")
+       , (";", "Edit comment for current prompt")
+       , ("Alt-;", "Edit transaction comment")
        ])
   , ("Acceptance",
      [ ("Ret", "Accept the currently selected answer")
@@ -92,6 +104,7 @@ draw as = case asDialog as of
   HelpDialog h -> [renderHelpWidget h, ui]
   QuitDialog -> [quitDialog, ui]
   AbortDialog -> [abortDialog, ui]
+  CommentDialog _ c -> [renderCommentWidget c, ui]
   NoDialog -> [ui]
 
   where ui =  viewState (asStep as)
@@ -107,6 +120,10 @@ draw as = case asDialog as of
 
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
+
+setComment :: CommentType -> Text -> Step -> Step
+setComment TransactionComment = setTransactionComment
+setComment CurrentComment     = setCurrentComment
 
 -- TODO Refactor to remove code duplication in individual case statements
 event :: AppState -> BrickEvent Name Event -> EventM Name (Next AppState)
@@ -129,13 +146,23 @@ event as (VtyEvent ev) = case asDialog as of
         liftIO (reset as { asDialog = NoDialog }) >>= continue
       | otherwise -> continue as { asDialog = NoDialog }
     _ -> continue as
+  CommentDialog typ dia -> handleCommentEvent ev dia >>= \case
+    CommentContinue dia' ->
+      continue as { asDialog = CommentDialog typ dia'
+                  , asStep = setComment typ (commentDialogComment dia') (asStep as)
+                  }
+    CommentFinished comment ->
+      continue as { asDialog = NoDialog
+                  , asStep = setComment typ comment (asStep as)
+                  }
+
   NoDialog -> case ev of
-    EvKey (KChar 'c') [MCtrl]
-      | asStep as == DateQuestion -> halt as
-      | otherwise -> continue as { asDialog = QuitDialog }
-    EvKey (KChar 'd') [MCtrl]
-      | asStep as == DateQuestion -> halt as
-      | otherwise -> continue as { asDialog = QuitDialog }
+    EvKey (KChar 'c') [MCtrl] -> case asStep as of
+      DateQuestion _ -> halt as
+      _              -> continue as { asDialog = QuitDialog }
+    EvKey (KChar 'd') [MCtrl] -> case asStep as of
+      DateQuestion _ -> halt as
+      _              -> continue as { asDialog = QuitDialog }
     EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
                                              , asMessage = ""}
     EvKey KDown [] -> continue as { asContext = listMoveDown $ asContext as
@@ -145,10 +172,15 @@ event as (VtyEvent ev) = case asDialog as of
     EvKey KUp [] -> continue as { asContext = listMoveUp $ asContext as
                                , asMessage = ""}
     EvKey (KChar '\t') [] -> continue (insertSelected as)
-    EvKey KEsc []
-      | asStep as == DateQuestion && T.null (editText as) -> halt as
-      | asStep as == DateQuestion -> liftIO (reset as) >>= continue
-      | otherwise -> continue as { asDialog = AbortDialog }
+    EvKey (KChar ';') [] ->
+      continue as { asDialog = myCommentDialog CurrentComment (getCurrentComment (asStep as)) }
+    EvKey (KChar ';') [MMeta] ->
+      continue as { asDialog = myCommentDialog TransactionComment (getTransactionComment (asStep as)) }
+    EvKey KEsc [] -> case asStep as of
+      DateQuestion _
+        | T.null (editText as) -> halt as
+        | otherwise -> liftIO (reset as) >>= continue
+      _ -> continue as { asDialog = AbortDialog }
     EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
     EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
     EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
@@ -169,9 +201,9 @@ event as _ = continue as
 
 reset :: AppState -> IO AppState
 reset as = do
-  sugg <- suggest (asJournal as) (asDateFormat as) DateQuestion
+  sugg <- suggest (asJournal as) (asDateFormat as) (DateQuestion "")
   return as
-    { asStep = DateQuestion
+    { asStep = DateQuestion ""
     , asEditor = clearEdit (asEditor as)
     , asContext = ctxList V.empty
     , asSuggestion = sugg
@@ -206,9 +238,9 @@ doNextStep useSelected as = do
     Left err -> return as { asMessage = err }
     Right (Finished trans) -> do
       liftIO $ addToJournal trans (asFilename as)
-      sugg <- suggest (asJournal as) (asDateFormat as) DateQuestion
+      sugg <- suggest (asJournal as) (asDateFormat as) (DateQuestion "")
       return AppState
-        { asStep = DateQuestion
+        { asStep = DateQuestion ""
         , asJournal = addTransactionEnd trans (asJournal  as)
         , asEditor = clearEdit (asEditor as)
         , asContext = ctxList V.empty
@@ -446,11 +478,11 @@ main = do
     Right journal -> do
       let edit = editor EditorName (txt . T.concat) (Just 1) ""
 
-      sugg <- suggest journal date DateQuestion
+      sugg <- suggest journal date (DateQuestion "")
 
       let welcome = "Welcome! Press F1 (or Alt-?) for help. Exit with Ctrl-d."
           matchAlgo = runIdentity $ optMatchAlgo opts
-          as = AppState edit DateQuestion journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog
+          as = AppState edit (DateQuestion "") journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog
 
       void $ defaultMain app as
 

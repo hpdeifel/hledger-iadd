@@ -27,7 +27,7 @@ suggestSpec = do
   context "at the account prompt" $ do
 
     it "suggests nothing for an empty journal" $
-      suggest HL.nulljournal german (AccountQuestion HL.nulltransaction)
+      suggest HL.nulljournal german (AccountQuestion HL.nulltransaction "")
         `shouldReturn` Nothing
 
     it "suggests the accounts in order" $ do
@@ -36,7 +36,7 @@ suggestSpec = do
 
       forM_ (zip (inits postings) postings) $ \(posts, next) -> do
         let t = mkTransaction ((2016, 1, 1), "Foo", map (\(x,y) -> (x, y+1)) posts)
-        suggest j german (AccountQuestion t) `shouldReturn` (Just (fst next))
+        suggest j german (AccountQuestion t "") `shouldReturn` (Just (fst next))
 
 
   context "at the amount prompt" $ do
@@ -47,7 +47,7 @@ suggestSpec = do
 
       forM_ (zip (inits postings) postings) $ \(posts, next) -> do
         let t = mkTransaction ((2016, 1, 1), "Foo", posts)
-        suggest j german (AmountQuestion (fst next) t)
+        suggest j german (AmountQuestion (fst next) t "")
           `shouldReturn` (Just ("€" <> (T.pack $ show $ snd next) <> ".00"))
 
     it "suggests the balancing amount if accounts don't match with similar transaction" $ do
@@ -55,19 +55,19 @@ suggestSpec = do
           j = mkJournal [ ((2017, 1, 1), "Foo", postings) ]
           t = mkTransaction ((2016, 1, 1), "Foo", [("foo", 3)])
 
-      suggest j german (AmountQuestion "y" t) `shouldReturn` (Just "€-3.00")
+      suggest j german (AmountQuestion "y" t "") `shouldReturn` (Just "€-3.00")
 
     it "initially doesn't suggest an amount if there is no similar transaction" $ do
       let j = mkJournal [ ((2017, 1, 1), "Foo", [("x", 2), ("y", 3)]) ]
           t = mkTransaction ((2016, 1, 1), "Bar", [])
 
-      suggest j german (AmountQuestion "y" t) `shouldReturn` Nothing
+      suggest j german (AmountQuestion "y" t "") `shouldReturn` Nothing
 
     it "suggests the balancing amount if there is no similar transaction for the second account" $ do
       let j = mkJournal [ ((2017, 1, 1), "Foo", [("x", 2), ("y", 3)]) ]
           t = mkTransaction ((2016, 1, 1), "Bar", [("foo", 3)])
 
-      suggest j german (AmountQuestion "y" t) `shouldReturn` (Just "€-3.00")
+      suggest j german (AmountQuestion "y" t "") `shouldReturn` (Just "€-3.00")
 
 
 accByFreqSpec :: Spec
