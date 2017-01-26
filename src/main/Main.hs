@@ -59,6 +59,7 @@ data AppState = AppState
   , asDateFormat :: DateFormat
   , asMatchAlgo :: MatchAlgo
   , asDialog :: DialogShown
+  , asInputHistory :: [Text]
   }
 
 data Name = HelpName | ListName | EditorName | CommentName
@@ -196,6 +197,7 @@ event as (VtyEvent ev) = case asDialog as of
                    <*> return (asDateFormat as)
                    <*> return (asMatchAlgo as)
                    <*> return NoDialog
+                   <*> return (asInputHistory as)
          >>= liftIO . setContext >>= continue
 event as _ = continue as
 
@@ -228,7 +230,8 @@ addTransactionEnd t j = j { HL.jtxns = HL.jtxns j ++ [t] }
 
 doNextStep :: Bool -> AppState -> IO AppState
 doNextStep useSelected as = do
-  let name = fromMaybe (Left $ editText as) $
+  let inputText = editText as
+      name = fromMaybe (Left $ inputText) $
                msum [ Right <$> if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
                     , Left <$> asMaybe (editText as)
                     , Left <$> asSuggestion as
@@ -250,6 +253,7 @@ doNextStep useSelected as = do
         , asDateFormat = asDateFormat as
         , asMatchAlgo = asMatchAlgo as
         , asDialog = NoDialog
+        , asInputHistory = []
         }
     Right (Step s') -> do
       sugg <- suggest (asJournal as) (asDateFormat as) s'
@@ -259,6 +263,7 @@ doNextStep useSelected as = do
                 , asContext = ctx'
                 , asSuggestion = sugg
                 , asMessage = ""
+                , asInputHistory = inputText : asInputHistory as
                 }
 
 doUndo :: AppState -> IO AppState
@@ -267,10 +272,15 @@ doUndo as = case undo (asStep as) of
   Right step -> do
     sugg <- suggest (asJournal as) (asDateFormat as) step
     setContext $ as { asStep = step
-                    , asEditor = clearEdit (asEditor as)
+                    , asEditor = setEdit lastInput (asEditor as)
                     , asSuggestion = sugg
                     , asMessage = "Undo."
+                    , asInputHistory = historyTail
                     }
+    where (lastInput,historyTail) =
+            case (asInputHistory as) of
+              x:t -> (x,t)
+              [] -> ("",[])
 
 insertSelected :: AppState -> AppState
 insertSelected as = case listSelectedElement (asContext as) of
@@ -482,7 +492,7 @@ main = do
 
       let welcome = "Welcome! Press F1 (or Alt-?) for help. Exit with Ctrl-d."
           matchAlgo = runIdentity $ optMatchAlgo opts
-          as = AppState edit (DateQuestion "") journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog
+          as = AppState edit (DateQuestion "") journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog []
 
       void $ defaultMain app as
 
