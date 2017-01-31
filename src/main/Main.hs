@@ -263,7 +263,14 @@ doNextStep useSelected as = do
                 , asContext = ctx'
                 , asSuggestion = sugg
                 , asMessage = ""
-                , asInputHistory = inputText : asInputHistory as
+                -- Adhere to the 'undo' behaviour: when in the final
+                -- confirmation question, 'undo' jumps back to the last amount
+                -- question instead of to the last account question. So do not
+                -- save the last empty account answer which indicates the end
+                -- of the transaction.
+                , asInputHistory = case s' of
+                    FinalQuestion _ -> asInputHistory as
+                    _               -> inputText : asInputHistory as
                 }
 
 doUndo :: AppState -> IO AppState
