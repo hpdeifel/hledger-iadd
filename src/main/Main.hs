@@ -268,9 +268,12 @@ doNextStep useSelected as = do
                 -- question instead of to the last account question. So do not
                 -- save the last empty account answer which indicates the end
                 -- of the transaction.
-                , asInputHistory = case s' of
-                    FinalQuestion _ -> asInputHistory as
-                    _               -> inputText : asInputHistory as
+                -- Furthermore, don't save the input if the FinalQuestion is
+                -- answered by 'n' (for no).
+                , asInputHistory = case (asStep as,s') of
+                    (FinalQuestion _, _) -> asInputHistory as
+                    (_, FinalQuestion _) -> asInputHistory as
+                    _                    -> inputText : asInputHistory as
                 }
 
 doUndo :: AppState -> IO AppState
