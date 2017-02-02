@@ -66,7 +66,7 @@ library
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
-                     , megaparsec >= 5.0 && <5.2
+                     , megaparsec >= 5.0 && <5.3
                      , containers
                      , optparse-applicative
                      , directory
@@ -97,7 +97,7 @@ executable hledger-iadd
                      , xdg-basedir
                      , unordered-containers
                      , free >= 4.12.4
-                     , megaparsec >= 5.0 && <5.2
+                     , megaparsec >= 5.0 && <5.3
   ghc-options:         -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
 
 test-suite spec
@@ -121,6 +121,6 @@ test-suite spec
                     , QuickCheck
                     , text-format
                     , free >= 4.12.4
-                    , megaparsec >= 5.0 && <5.2
+                    , megaparsec >= 5.0 && <5.3
                     , text-zipper
   ghc-options:        -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
