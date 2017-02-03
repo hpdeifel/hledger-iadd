@@ -3,7 +3,6 @@
 module ModelSpec (spec) where
 
 import           Test.Hspec
-import           Test.QuickCheck
 
 import           Control.Monad
 import           Data.List
@@ -22,6 +21,7 @@ spec = do
   describe "suggest" suggestSpec
   describe "accountsByFrequency" accByFreqSpec
   describe "setCurrentComment" setCurrentCommentSpec
+  describe "setTransactionComment" setTransactionCommentSpec
 
 
 suggestSpec :: Spec
@@ -111,6 +111,29 @@ setCurrentCommentSpec = do
     worksOn step =
       let comment = "a fancy comment"
       in getCurrentComment (setCurrentComment comment step) `shouldBe` comment
+
+setTransactionCommentSpec :: Spec
+setTransactionCommentSpec = do
+  it "works at the date prompt" $
+    worksOn (DateQuestion "")
+
+  it "works at the description prompt" $
+    worksOn (DescriptionQuestion (fromGregorian 2017 2 3) "")
+
+  it "works at the account prompt" $
+    worksOn (AccountQuestion HL.nulltransaction "")
+
+  it "works at the amount prompt" $
+    worksOn (AmountQuestion "foo" HL.nulltransaction "")
+
+  it "works at the final prompt" $
+    worksOn (FinalQuestion HL.nulltransaction)
+
+  where
+    worksOn :: Step -> Expectation
+    worksOn step =
+      let comment = "a fancy comment"
+      in getTransactionComment (setTransactionComment comment step) `shouldBe` comment
 
 -- Helpers
 
