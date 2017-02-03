@@ -67,6 +67,10 @@ data Name = HelpName | ListName | EditorName | CommentName
 
 data CommentType = TransactionComment | CurrentComment
 
+instance Show CommentType where
+  show TransactionComment = "Transaction comment"
+  show CurrentComment = "Comment"
+
 data DialogShown = NoDialog
                  | HelpDialog (HelpWidget Name)
                  | QuitDialog
@@ -77,7 +81,8 @@ myHelpDialog :: DialogShown
 myHelpDialog = HelpDialog (helpWidget HelpName bindings)
 
 myCommentDialog :: CommentType -> Text -> DialogShown
-myCommentDialog typ comment = CommentDialog typ (commentWidget CommentName comment)
+myCommentDialog typ comment =
+  CommentDialog typ (commentWidget CommentName (T.pack $ show typ) comment)
 
 bindings :: KeyBindings
 bindings = KeyBindings

@@ -9,25 +9,28 @@ module Brick.Widgets.CommentDialog
   , handleCommentEvent
   ) where
 
-import Brick
-import Brick.Widgets.Edit hiding (handleEditorEvent)
-import Brick.Widgets.Dialog
-import Brick.Widgets.Center
-import Data.Text.Zipper
-import Graphics.Vty.Input
+import           Data.Monoid
+
+import           Brick
+import           Brick.Widgets.Edit hiding (handleEditorEvent)
+import           Brick.Widgets.Dialog
+import           Brick.Widgets.Center
+import           Data.Text.Zipper
+import           Graphics.Vty.Input
 import qualified Data.Text as T
 import           Data.Text (Text)
 
-import Brick.Widgets.Edit.EmacsBindings
+import           Brick.Widgets.Edit.EmacsBindings
 
 data CommentWidget n = CommentWidget
   { origComment :: Text
   , textArea :: Editor Text n
   , dialogWidget :: Dialog ()
+  , promptPrefix :: Text
   }
 
-commentWidget :: n -> Text -> CommentWidget n
-commentWidget name comment =
+commentWidget :: n -> Text -> Text -> CommentWidget n
+commentWidget name prompt comment =
   let
     title = "ESC: cancel, RET: accept, Alt-RET: New line"
     maxWidth = 80
@@ -38,6 +41,7 @@ commentWidget name comment =
       { origComment = comment
       , textArea = applyEdit gotoEnd edit
       , dialogWidget = diag
+      , promptPrefix = prompt
       }
 
 data CommentAction n = CommentContinue (CommentWidget n)
@@ -51,13 +55,15 @@ handleCommentEvent ev widget = case ev of
     widget { textArea = applyEdit breakLine (textArea widget) }
   _ -> do
     textArea' <- handleEditorEvent ev (textArea widget)
-    return $ CommentContinue $ CommentWidget (origComment widget) textArea' (dialogWidget widget)
+    return $ CommentContinue $
+      CommentWidget (origComment widget) textArea' (dialogWidget widget) (promptPrefix widget)
 
 renderCommentWidget :: (Ord n, Show n) => CommentWidget n -> Widget n
 renderCommentWidget widget =
   let
     height = min (length (getEditContents (textArea widget)) + 4) 24
-    textArea' =  padTop (Pad 1) $ txt "Comment: " <+> renderEditor True (textArea widget)
+    textArea' =  padTop (Pad 1) $
+      txt (promptPrefix widget <> ": ") <+> renderEditor True (textArea widget)
   in
     vCenterLayer $ vLimit height $ renderDialog (dialogWidget widget) textArea'
 
