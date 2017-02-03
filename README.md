@@ -152,6 +152,8 @@ The following keyboard shortcuts are available:
 | <kbd>Tab</kbd>                  | Insert the currently selected answer into the text area                       |
 | <kbd>C-n</kbd>,<kbd>↓</kbd>     | Select the next context item                                                  |
 | <kbd>C-p</kbd>,<kbd>↑</kbd>     | Select the previous context item                                              |
+| <kbd>;</kbd>                    | Edit comment for current prompt                                               |
+| <kbd>Alt-;</kbd>                | Edit transaction comment                                                      |
 | <kbd>F1</kbd>,<kbd>Alt-?</kbd>  | Show help dialog                                                              |
 
 ## Default Currency
