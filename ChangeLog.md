@@ -1,3 +1,9 @@
+# 1.2
+
+  - Add support for comments (bound to `;`)
+  - Restore previous text input on undo
+  - Bump text-zipper dependency to 0.10
+
 # 1.1.4
 
   - Sort account names by frequency for completion
