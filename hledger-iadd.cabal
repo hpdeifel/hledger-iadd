@@ -54,7 +54,6 @@ library
                      , Brick.Widgets.BetterDialog
                      , Brick.Widgets.WrappedText
                      , Brick.Widgets.Edit.EmacsBindings
-                     , Data.Text.Zipper.Generic.Words
   default-language:    Haskell2010
   build-depends:       base >= 4.8 && < 5
                      , hledger-lib >= 1.0 && < 1.2
@@ -62,7 +61,7 @@ library
                      , vty >= 5.4
                      , text
                      , microlens
-                     , text-zipper
+                     , text-zipper >= 0.10
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
@@ -87,7 +86,7 @@ executable hledger-iadd
                      , vty >= 5.4
                      , text
                      , microlens
-                     , text-zipper
+                     , text-zipper >= 0.10
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
@@ -108,7 +107,6 @@ test-suite spec
                     , ConfigParserSpec
                     , AmountParserSpec
                     , ModelSpec
-                    , Data.Text.Zipper.Generic.WordsSpec
   default-language:   Haskell2010
   build-depends:      base >= 4.8 && < 5
                     , hledger-iadd
@@ -122,5 +120,5 @@ test-suite spec
                     , text-format
                     , free >= 4.12.4
                     , megaparsec >= 5.0 && <5.3
-                    , text-zipper
+                    , text-zipper >= 0.10
   ghc-options:        -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
