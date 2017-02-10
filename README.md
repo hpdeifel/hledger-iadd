@@ -102,7 +102,8 @@ The following command line options are available:
   - `--date-format`: Format for parsing dates. (Default:
     `[[%y/]%m/]%d`, the usual ledger date format). Brackets can be
     used to specify optional parts. E.g the german date format would
-    be `%d[.[%m[.[%y]]]]`
+    be `%d[.[%m[.[%y]]]]`. (Dates are written as `y/m/d` to the
+    journal regardless of this option).
   - `--completion-engine`: Algorithm for account name completion. Can
     be `substrings` or `fuzzy`.
   - `--dump-default-config`: Print the example config file to stdout
