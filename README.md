@@ -193,6 +193,14 @@ The following options are currently available:
 	- `fuzzy`: All letters from the search string have to appear in
       the name in the same order
 
+## License
+
+The code of `hledger-iadd` is released under the [BSD3] license, but
+since `hledger-lib` -- the library that `hledger-iadd` uses -- is
+licensed under the [GPLv3], the terms of the GPL apply to the compiled
+and linked binary.
 
 [stack]: https://github.com/commercialhaskell/stack
 [haskell platform]: https://www.haskell.org/platform/
+[BSD3]: https://opensource.org/licenses/BSD-3-Clause
+[GPLv3]: https://www.gnu.org/licenses/gpl-3.0.en.html
