@@ -164,16 +164,8 @@ mkTransaction ((year,month,day), desc, postings) = HL.Transaction
 
   where
     mkPosting :: (Text, Int) -> HL.Posting
-    mkPosting (account, amount) = HL.Posting
-      { HL.pdate = Nothing
-      , HL.pdate2 = Nothing
-      , HL.pstatus = HL.Uncleared
-      , HL.paccount = account
+    mkPosting (account, amount) = HL.nullposting
+      { HL.paccount = account
       , HL.pamount = HL.mixed [HL.eur (fromIntegral amount)]
-      , HL.pcomment = ""
-      , HL.ptype = HL.RegularPosting
-      , HL.ptags = []
-      , HL.pbalanceassertion = Nothing
-      , HL.ptransaction = Nothing
       }
 
