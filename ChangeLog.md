@@ -1,3 +1,8 @@
+# 1.2.1
+
+  - Support for hledger-lib-1.2
+  - Minor documnentation fixes
+
 # 1.2
 
   - Add support for comments (bound to `;`)
