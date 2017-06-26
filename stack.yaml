@@ -3,9 +3,10 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.17
+- brick-0.19
+- data-clist-0.1.1.0
 - text-zipper-0.10
 - vty-5.15
 - haskell-src-exts-1.19.0
 - hledger-lib-1.1
-resolver: lts-7.15
+resolver: lts-8.19

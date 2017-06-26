@@ -35,7 +35,7 @@ commentWidget name prompt comment =
     title = "ESC: cancel, RET: accept, Alt-RET: New line"
     maxWidth = 80
     diag = dialog (Just title) Nothing maxWidth
-    edit = editorText name (txt . T.unlines) Nothing comment
+    edit = editorText name Nothing comment
   in
     CommentWidget
       { origComment = comment
@@ -62,8 +62,9 @@ renderCommentWidget :: (Ord n, Show n) => CommentWidget n -> Widget n
 renderCommentWidget widget =
   let
     height = min (length (getEditContents (textArea widget)) + 4) 24
+    drawer = txt . T.unlines
     textArea' =  padTop (Pad 1) $
-      txt (promptPrefix widget <> ": ") <+> renderEditor True (textArea widget)
+      txt (promptPrefix widget <> ": ") <+> renderEditor drawer True (textArea widget)
   in
     vCenterLayer $ vLimit height $ renderDialog (dialogWidget widget) textArea'
 

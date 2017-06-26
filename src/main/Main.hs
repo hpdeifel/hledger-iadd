@@ -118,7 +118,7 @@ draw as = case asDialog as of
           <=> (viewQuestion (asStep as)
                <+> viewSuggestion (asSuggestion as)
                <+> txt ": "
-               <+> renderEditor True (asEditor as))
+               <+> renderEditor (txt . T.concat) True (asEditor as))
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
@@ -501,7 +501,7 @@ main = do
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
     Left err -> hPutStrLn stderr err >> exitFailure
     Right journal -> do
-      let edit = editor EditorName (txt . T.concat) (Just 1) ""
+      let edit = editor EditorName (Just 1) ""
 
       sugg <- suggest journal date (DateQuestion "")
 
