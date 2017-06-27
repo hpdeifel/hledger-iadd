@@ -1,3 +1,8 @@
+# 1.2.2
+
+  - Support for megaparsec-5.3.0
+  - Bump brick dependency to 0.19
+
 # 1.2.1
 
   - Support for hledger-lib-1.2
