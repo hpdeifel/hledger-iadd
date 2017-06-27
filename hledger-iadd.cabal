@@ -26,7 +26,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Hans-Peter Deifel <hpd@hpdeifel.de>
 maintainer:          Hans-Peter Deifel <hpd@hpdeifel.de>
-copyright:           2016 Hans-Peter Deifel
+copyright:           2017 Hans-Peter Deifel
 category:            Finance, Console
 build-type:          Simple
 cabal-version:       >=1.10
