@@ -148,18 +148,10 @@ mkJournal transactions =
   foldl (\j t -> HL.addTransaction (mkTransaction t) j) HL.nulljournal transactions
 
 mkTransaction :: (Date, Text, [(Text, Int)]) -> HL.Transaction
-mkTransaction ((year,month,day), desc, postings) = HL.Transaction
-  { HL.tindex = 0
-  , HL.tsourcepos = undefined
-  , HL.tdate = fromGregorian year month day
-  , HL.tdate2 = Nothing
-  , HL.tstatus = HL.Uncleared
-  , HL.tcode = ""
+mkTransaction ((year,month,day), desc, postings) = HL.nulltransaction
+  { HL.tdate = fromGregorian year month day
   , HL.tdescription = desc
-  , HL.tcomment = ""
-  , HL.ttags = []
   , HL.tpostings = map mkPosting postings
-  , HL.tpreceding_comment_lines = ""
   }
 
   where
