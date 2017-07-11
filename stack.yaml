@@ -3,7 +3,8 @@ extra-package-dbs: []
 packages:
 - '.'
 extra-deps:
-- brick-0.19
+- brick-0.20
+- word-wrap-0.1
 - data-clist-0.1.1.0
 - text-zipper-0.10
 - vty-5.15

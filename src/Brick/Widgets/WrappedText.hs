@@ -1,3 +1,4 @@
+-- | TODO Use the built-in wrapping feature in brick-0.20
 module Brick.Widgets.WrappedText (wrappedText) where
 
 import           Brick
