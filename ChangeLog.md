@@ -1,3 +1,9 @@
+# 1.2.3
+
+  - Support for brick-0.20
+  - Restore compatibility with brick-0.17
+  - Support for hledger-lib-1.3
+
 # 1.2.2
 
   - Support for megaparsec-5.3.0
