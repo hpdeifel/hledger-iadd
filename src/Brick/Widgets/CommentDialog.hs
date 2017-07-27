@@ -12,7 +12,6 @@ module Brick.Widgets.CommentDialog
 import           Data.Monoid
 
 import           Brick
-import           Brick.Widgets.Edit hiding (handleEditorEvent)
 import           Brick.Widgets.Dialog
 import           Brick.Widgets.Center
 import           Data.Text.Zipper
@@ -24,7 +23,7 @@ import           Brick.Widgets.Edit.EmacsBindings
 
 data CommentWidget n = CommentWidget
   { origComment :: Text
-  , textArea :: Editor Text n
+  , textArea :: Editor n
   , dialogWidget :: Dialog ()
   , promptPrefix :: Text
   }
@@ -35,7 +34,7 @@ commentWidget name prompt comment =
     title = "ESC: cancel, RET: accept, Alt-RET: New line"
     maxWidth = 80
     diag = dialog (Just title) Nothing maxWidth
-    edit = editorText name Nothing comment
+    edit = editorText name (txt . T.unlines) Nothing comment
   in
     CommentWidget
       { origComment = comment
@@ -62,9 +61,8 @@ renderCommentWidget :: (Ord n, Show n) => CommentWidget n -> Widget n
 renderCommentWidget widget =
   let
     height = min (length (getEditContents (textArea widget)) + 4) 24
-    drawer = txt . T.unlines
     textArea' =  padTop (Pad 1) $
-      txt (promptPrefix widget <> ": ") <+> renderEditor drawer True (textArea widget)
+      txt (promptPrefix widget <> ": ") <+> renderEditor True (textArea widget)
   in
     vCenterLayer $ vLimit height $ renderDialog (dialogWidget widget) textArea'
 

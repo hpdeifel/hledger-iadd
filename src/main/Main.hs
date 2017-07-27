@@ -49,7 +49,7 @@ import           Data.Version (showVersion)
 import qualified Paths_hledger_iadd as Paths
 
 data AppState = AppState
-  { asEditor :: Editor Text Name
+  { asEditor :: Editor Name
   , asStep :: Step
   , asJournal :: HL.Journal
   , asContext :: List Name Text
@@ -118,7 +118,7 @@ draw as = case asDialog as of
           <=> (viewQuestion (asStep as)
                <+> viewSuggestion (asSuggestion as)
                <+> txt ": "
-               <+> renderEditor (txt . T.concat) True (asEditor as))
+               <+> renderEditor True (asEditor as))
           <=> hBorder
           <=> expand (viewContext (asContext as))
           <=> hBorder
@@ -314,10 +314,10 @@ attrs = attrMap defAttr
   , (helpAttr <> "title", fg green)
   ]
 
-clearEdit :: Editor Text n -> Editor Text n
+clearEdit :: Editor n -> Editor n
 clearEdit = setEdit ""
 
-setEdit :: Text -> Editor Text n -> Editor Text n
+setEdit :: Text -> Editor n -> Editor n
 setEdit content edit = edit & editContentsL .~ zipper
   where zipper = gotoEOL (textZipper [content] (Just 1))
 
@@ -501,7 +501,7 @@ main = do
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
     Left err -> hPutStrLn stderr err >> exitFailure
     Right journal -> do
-      let edit = editor EditorName (Just 1) ""
+      let edit = editorText EditorName (txt . T.concat) (Just 1) ""
 
       sugg <- suggest journal date (DateQuestion "")
 

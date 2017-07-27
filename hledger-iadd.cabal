@@ -57,10 +57,11 @@ library
   default-language:    Haskell2010
   build-depends:       base >= 4.8 && < 5
                      , hledger-lib >= 1.0 && < 1.4
-                     , brick >= 0.19 && < 0.21
+                     , brick >= 0.17 && < 0.21
                      , vty >= 5.4
                      , text
                      , microlens
+                     , microlens-th
                      , text-zipper >= 0.10
                      , transformers >= 0.3
                      , time >= 1.5
@@ -82,7 +83,7 @@ executable hledger-iadd
   build-depends:       base >= 4.8 && < 5
                      , hledger-iadd
                      , hledger-lib >= 1.0 && < 1.4
-                     , brick >= 0.19 && < 0.21
+                     , brick >= 0.17 && < 0.21
                      , vty >= 5.4
                      , text
                      , microlens
