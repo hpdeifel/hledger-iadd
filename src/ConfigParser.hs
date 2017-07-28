@@ -39,6 +39,7 @@ module ConfigParser
        , parserDefault
        , parserExample
        , ConfParseError
+       , OParser
        , Option
        , OptionArgument()
        ) where
@@ -49,33 +50,62 @@ import           Control.Monad
 import           Data.Functor.Identity
 import           Data.Monoid
 import           Data.Text (Text)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Set as S
 import qualified Text.Megaparsec as P
 import           Text.Megaparsec hiding ((<|>), many, option, optional)
-import           Text.Megaparsec.Text
+-- import           Text.Megaparsec.Text
+
+-- | Errors that can occur during parsing. Use the 'Show' instance for printing.
+data ConfParseError = UnknownOption Text
+                    | TypeError Text Text -- Type and Option name
+                    | ConfParseFail String
+                    | ConfParseIndentation Ordering Pos Pos
+  deriving (Eq, Ord, Show)
+
+instance ErrorComponent ConfParseError where
+  representFail = ConfParseFail
+  representIndentation = ConfParseIndentation
+
+instance ShowErrorComponent ConfParseError where
+  showErrorComponent (UnknownOption name) = "Unknown option " ++ T.unpack name
+  showErrorComponent (TypeError typ name) =
+    "in " ++ T.unpack typ ++ " argument for option " ++ T.unpack name
+  showErrorComponent (ConfParseFail msg) = msg
+  showErrorComponent (ConfParseIndentation ord ref actual) =
+    "incorrect indentation (got " ++ show (unPos actual) ++
+    ", should be " ++ p ++ show (unPos ref) ++ ")"
+    where p = case ord of
+                LT -> "less than "
+                EQ -> "equal to "
+                GT -> "greater than "
+
+type OParser = Parsec ConfParseError Text
+
+type CustomParseError = ParseError Char ConfParseError
 
 -- | Parse a config file from a 'Text'.
 parseConfig :: FilePath -- ^ File path to use in error messages
             -> Text -- ^ The input test
             -> OptParser a -- ^ The parser to use
-            -> Either ConfParseError a
+            -> Either CustomParseError a
 parseConfig path input parser = case parse (assignmentList <* eof) path input of
-  Left err -> Left $ SyntaxError err
+  Left err -> Left err
   Right res -> runOptionParser res parser
 
 -- | Parse a config file from an actual file in the filesystem.
 parseConfigFile :: FilePath -- ^ Path to the file
                 -> OptParser a -- ^ The parser to use
-                -> IO (Either ConfParseError a)
+                -> IO (Either CustomParseError a)
 parseConfigFile path parser = do
   input <- T.readFile path
   return $ parseConfig path input parser
 
 -- | An option in the config file. Use 'option' as a smart constructor.
 data Option a = Option
-  { optParser :: Parser a
+  { optParser :: OParser a
   , optType :: Text -- Something like "string" or "integer"
   , optName :: Text
   , optHelp :: Text
@@ -86,23 +116,11 @@ data Option a = Option
 -- | The main parser type. Use 'option' and the 'Applicative' instance to create those.
 type OptParser a = Ap Option a
 
--- | Errors that can occur during parsing. Use the 'Show' instance for printing.
-data ConfParseError = SyntaxError (ParseError Char Dec)
-                    | UnknownOption SourcePos Text
-                    | TypeError (ParseError Char Dec)
-  deriving (Eq)
-
-instance Show ConfParseError where
-  show (SyntaxError e) = parseErrorPretty e
-  show (UnknownOption pos key) =
-    sourcePosPretty pos ++ ": Unknown option " ++ T.unpack key ++ "\n"
-  show (TypeError e) = parseErrorPretty e
-
 -- | Class for supported option types.
 --
 -- At the moment, orphan instances are not supported
 class OptionArgument a where
-  mkParser :: (Text, Parser a)
+  mkParser :: (Text, OParser a)
   printArgument :: a -> Text
 
 -- | 'OptParser' that parses one option.
@@ -124,7 +142,7 @@ customOption :: Text -- ^ The option name
              -> Text -- ^ A textual representation of the default value
              -> Text -- ^ A help string for the option
              -> Text -- ^ A description of the expected type such sas "string" or "integer"
-             -> Parser a -- ^ Parser for the option
+             -> OParser a -- ^ Parser for the option
              -> OptParser a
 customOption optName optDefault optDefaultTxt optHelp optType optParser = liftAp $ Option {..}
 
@@ -149,7 +167,7 @@ quote x = "\"" <> escape x <> "\""
   where
     escape = T.replace "\"" "\\\"" . T.replace "\\" "\\\\"
 
-runOptionParser :: [Assignment] -> OptParser a -> Either ConfParseError a
+runOptionParser :: [Assignment] -> OptParser a -> Either CustomParseError a
 runOptionParser (a:as) parser =  parseOption parser a >>= runOptionParser as
 runOptionParser [] parser = Right $ parserDefault parser
 
@@ -174,16 +192,18 @@ parserExample = T.strip . runAp_ example1
   where example1 a = commentify (optHelp a) <> optName a <> " = " <> optDefaultTxt a <> "\n\n"
         commentify = T.unlines . map ("# " <>) . T.lines
 
-parseOption :: OptParser a -> Assignment -> Either ConfParseError (OptParser a)
+parseOption :: OptParser a -> Assignment -> Either CustomParseError (OptParser a)
 parseOption (Pure _) ass =
-  Left $ UnknownOption (assignmentPosition ass) (assignmentKey ass)
+  Left $ ParseError (singleton (assignmentPosition ass))
+                    S.empty
+                    S.empty
+                    (S.singleton (UnknownOption (assignmentKey ass)))
 parseOption (Ap opt rest) ass
   | optName opt == assignmentKey ass =
     let content = (valueContent $ assignmentValue ass)
         pos = (valuePosition $ assignmentValue ass)
     in case parseWithStart (optParser opt <* eof) pos content of
-         Left e -> Left $ TypeError $ addErrorMessage e $
-           "in " ++ T.unpack (optType opt) ++ " argument for option " ++ T.unpack (assignmentKey ass)
+         Left e -> Left $ addCustomError e $ TypeError (optType opt) (assignmentKey ass)
          Right res -> Right $ fmap ($ res) rest
   | otherwise = fmap (Ap opt) $ parseOption rest ass
 
@@ -200,46 +220,46 @@ data AssignmentValue = AssignmentValue
   , valueContent :: Text
   } deriving (Show)
 
-assignmentList :: Parser [Assignment]
+assignmentList :: OParser [Assignment]
 assignmentList = whitespace *> many (assignment <* whitespace)
 
-assignment :: Parser Assignment
+assignment :: OParser Assignment
 assignment = do
   Assignment
     <$> getPosition <*> key <* whitespaceNoComment
     <*  char '=' <* whitespaceNoComment
     <*> value
 
-key :: Parser Text
+key :: OParser Text
 key = T.pack <$> some (alphaNumChar <|> char '_' <|> char '-')
 
-value :: Parser AssignmentValue
+value :: OParser AssignmentValue
 value = AssignmentValue <$> getPosition <*> content <* whitespaceNoEOL <* (void eol <|> eof)
 
-content :: Parser Text
+content :: OParser Text
 content =  escapedString
        <|> bareString
 
-bareString :: Parser Text
+bareString :: OParser Text
 bareString = (T.strip . T.pack <$> some (noneOf ("#\n" :: String)))
   <?> "bare string"
 
-escapedString :: Parser Text
+escapedString :: OParser Text
 escapedString = (T.pack <$> (char '"' *> many escapedChar <* char '"'))
                 <?> "quoted string"
   where escapedChar =  char '\\' *> anyChar
                    <|> noneOf ("\"" :: String)
 
-whitespace :: Parser ()
+whitespace :: OParser ()
 whitespace = skipMany $ (void $ oneOf (" \t\n" :: String)) <|> comment
 
-whitespaceNoEOL :: Parser ()
+whitespaceNoEOL :: OParser ()
 whitespaceNoEOL = skipMany $ (void $ oneOf (" \t" :: String)) <|> comment
 
-whitespaceNoComment :: Parser ()
+whitespaceNoComment :: OParser ()
 whitespaceNoComment = skipMany $ oneOf (" \t" :: String)
 
-comment :: Parser ()
+comment :: OParser ()
 comment = char '#' >> skipMany (noneOf ("\n" :: String))
 
 parseWithStart :: (Stream s, ErrorComponent e)
@@ -247,9 +267,11 @@ parseWithStart :: (Stream s, ErrorComponent e)
 parseWithStart p pos = parse p' (sourceName pos)
   where p' = do setPosition pos; p
 
-parseNumber :: Read a => Parser a
+parseNumber :: Read a => OParser a
 parseNumber = read <$> ((<>) <$> (P.option "" $ string "-") <*> some digitChar)
 
--- | Helper function brought over from parsec
-addErrorMessage :: ParseError t Dec -> String -> ParseError t Dec
-addErrorMessage e errorMsg = e { errorCustom = S.insert (DecFail errorMsg) (errorCustom e) }
+addCustomError :: Ord e => ParseError t e -> e -> ParseError t e
+addCustomError e custom = e { errorCustom = S.insert custom (errorCustom e) }
+
+singleton :: a -> NE.NonEmpty a
+singleton x = x NE.:| []

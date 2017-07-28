@@ -36,7 +36,6 @@ import           System.Environment.XDG.BaseDir
 import           System.Exit
 import           System.IO
 import qualified Text.Megaparsec as P
-import qualified Text.Megaparsec.Text as P
 
 import           Brick.Widgets.HelpMessage
 import           Brick.Widgets.CommentDialog
@@ -379,7 +378,7 @@ configPath :: IO FilePath
 configPath = getUserConfigFile "hledger-iadd" "config.conf"
 
 -- | Megaparsec parser for MatchAlgo, used for config file parsing
-parseMatchAlgo :: P.Parser MatchAlgo
+parseMatchAlgo :: OParser MatchAlgo
 parseMatchAlgo =  (P.string "fuzzy" *> pure Fuzzy)
               <|> (P.string "substrings" *> pure Substrings)
 
@@ -420,7 +419,7 @@ parseConfigFile = do
     Left (_ :: SomeException) -> return (parserDefault $ confParser def)
     Right res -> case parseConfig path res (confParser def) of
       Left err -> do
-        putStr (show err)
+        putStr (P.parseErrorPretty err)
         exitFailure
       Right res' -> return res'
 
