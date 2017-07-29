@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE PackageImports #-}
 
 module Main where
 
@@ -35,7 +36,8 @@ import           System.Environment
 import           System.Environment.XDG.BaseDir
 import           System.Exit
 import           System.IO
-import qualified Text.Megaparsec as P
+-- explicit package import since hledger-lib defines the same module
+import qualified "hledger-iadd" Text.Megaparsec.Compat as P
 
 import           Brick.Widgets.HelpMessage
 import           Brick.Widgets.CommentDialog

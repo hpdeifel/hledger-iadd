@@ -30,8 +30,7 @@ import           Data.Text.Lazy.Builder (Builder, toLazyText)
 import           Data.Time hiding (parseTime)
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
-import           Text.Megaparsec hiding ((<|>), many)
-import           Text.Megaparsec.Text
+import           Text.Megaparsec.Compat
 
 newtype DateFormat = DateFormat [DateSpec]
                    deriving (Eq, Show)
@@ -158,7 +157,7 @@ parseDate1 ds = case ds of
   DateYearShort -> part $ (,mempty,mempty) . fmap completeYear
   DateMonth     -> part (mempty,,mempty)
   DateDay       -> part (mempty,mempty,)
-  DateString s  -> string (T.unpack s) >> pure mempty
+  DateString s  -> string s >> pure mempty
   DateOptional ds' -> option mempty (try $ parseDate' ds')
 
   where digits = some digitChar

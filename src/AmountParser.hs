@@ -4,7 +4,7 @@ import           Data.Text (Text)
 import qualified Hledger as HL
 import           Data.Functor.Identity
 import           Control.Monad.Trans.State.Strict
-import           Text.Megaparsec
+import           Text.Megaparsec.Compat hiding (Parser)
 
 type Parser a = HL.JournalStateParser Identity a
 
