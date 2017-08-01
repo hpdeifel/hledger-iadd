@@ -1,3 +1,7 @@
+# 1.2.4
+
+  - Support for megaparsec-6.0
+
 # 1.2.3
 
   - Support for brick-0.20
