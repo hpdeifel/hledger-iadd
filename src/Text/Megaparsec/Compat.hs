@@ -24,6 +24,7 @@ module Text.Megaparsec.Compat
   ) where
 
 import qualified Data.Set as S
+import           Data.Set (Set)
 import           Data.Text (Text)
 import           Text.Megaparsec.Char hiding (string)
 import qualified Text.Megaparsec.Char as P
@@ -50,11 +51,15 @@ type Parser = Parsec Dec Text
 -- information about unexpected and expected tokens.
 #if MIN_VERSION_megaparsec(6,0,0)
 data CustomError e = CustomError
-  { customError :: e  -- TODO Actually save (un)expected tokens on megaparsec-6
-  } deriving (Eq, Show, Ord)
+  (Maybe (ErrorItem Char))      -- unexpected
+  (Set (ErrorItem Char))        -- expected
+  e                             -- custom error data
+  deriving (Eq, Show, Ord)
 
 instance ShowErrorComponent e => ShowErrorComponent (CustomError e) where
-  showErrorComponent (CustomError e) = showErrorComponent e
+  showErrorComponent (CustomError us es e) =
+    parseErrorTextPretty (TrivialError undefined us es :: ParseError Char Void)
+    ++ showErrorComponent e
 #else
 data CustomError e = CustomError e
                    | CustomFail String
@@ -81,7 +86,7 @@ instance ShowErrorComponent e => ShowErrorComponent (CustomError e) where
 mkCustomError :: SourcePos -> e -> ParseError t (CustomError e)
 #if MIN_VERSION_megaparsec(6,0,0)
 mkCustomError pos custom = FancyError (neSingleton pos)
-  (S.singleton (ErrorCustom (CustomError custom)))
+  (S.singleton (ErrorCustom (CustomError Nothing S.empty custom)))
 #else
 mkCustomError pos custom = ParseError (neSingleton pos) S.empty S.empty
   (S.singleton (CustomError custom))
@@ -91,11 +96,13 @@ mkCustomError pos custom = ParseError (neSingleton pos) S.empty S.empty
 --
 -- This retains the original information such as expected and unexpected tokens
 -- as well as the source position.
-addCustomError :: Ord e => ParseError t (CustomError e) -> e -> ParseError t (CustomError e)
+addCustomError :: Ord e => ParseError Char (CustomError e) -> e -> ParseError Char (CustomError e)
 #if MIN_VERSION_megaparsec(6,0,0)
 addCustomError e custom = case e of
-  TrivialError source _ _ -> FancyError source (S.singleton (ErrorCustom (CustomError custom)))
-  FancyError source _ -> FancyError source (S.singleton (ErrorCustom (CustomError custom)))
+  TrivialError source us es ->
+    FancyError source (S.singleton (ErrorCustom (CustomError us es custom)))
+  FancyError source es ->
+    FancyError source (S.insert (ErrorCustom (CustomError Nothing S.empty custom)) es)
 #else
 addCustomError e custom = e { errorCustom = S.insert (CustomError custom) (errorCustom e) }
 #endif
