@@ -24,13 +24,13 @@ module Text.Megaparsec.Compat
   ) where
 
 import qualified Data.Set as S
-import           Data.Set (Set)
 import           Data.Text (Text)
 import           Text.Megaparsec.Char hiding (string)
 import qualified Text.Megaparsec.Char as P
 import qualified Data.List.NonEmpty as NE
 
 #if MIN_VERSION_megaparsec(6,0,0)
+import           Data.Set (Set)
 import           Data.Void
 import           Text.Megaparsec
 #else
