@@ -1,3 +1,7 @@
+# 1.2.5
+
+  - Fix broken release tarball
+
 # 1.2.4
 
   - Support for megaparsec-6.0
