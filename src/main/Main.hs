@@ -6,47 +6,61 @@
 
 module Main where
 
-import           Brick
-import           Brick.Widgets.Border
-import           Brick.Widgets.BetterDialog
-import           Brick.Widgets.Edit.EmacsBindings
-import           Brick.Widgets.List
-import           Brick.Widgets.List.Utils
-import           Graphics.Vty hiding (parseConfigFile, (<|>))
+import Brick
+  ( Widget, App(..), AttrMap, BrickEvent(..), Next, EventM
+  , (<=>), (<+>), txt, continue, halt, attrMap, on, fg
+  , defaultMain, showFirstCursor, padBottom, Padding(Max)
+  )
+import Brick.Widgets.BetterDialog (dialog)
+import Brick.Widgets.Border (hBorder)
+import Brick.Widgets.Edit.EmacsBindings
+  ( Editor, renderEditor, handleEditorEvent, getEditContents, editContentsL
+  , editorText
+  )
+import Brick.Widgets.List
+  ( List, listMoveDown, listMoveUp, listMoveTo, listSelectedElement
+  , listSelectedAttr, list
+  )
+import Brick.Widgets.List.Utils (listSimpleReplace)
+import Graphics.Vty
+  (Event(EvKey), Modifier(MCtrl,MMeta), Key(..), defAttr, black, white, green)
 
-import           Control.Exception
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except
-import           Data.Functor.Identity
-import           Data.Maybe
-import           Data.Monoid
-import           Data.Text (Text)
+import Control.Exception (SomeException, try)
+import Control.Monad (msum, when, void)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Except (runExceptT)
+import Data.Functor.Identity (Identity(..), runIdentity)
+import Data.Maybe (fromMaybe, fromJust)
+import Data.Monoid ((<>), First(..), getFirst)
+import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           Data.Text.Zipper
+import Data.Text.Zipper (gotoEOL, textZipper)
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
-import           Lens.Micro
+import Lens.Micro ((&), (.~))
 import qualified Options.Applicative as OA
-import           Options.Applicative hiding (str, option)
-import           System.Directory
-import           System.Environment
-import           System.Environment.XDG.BaseDir
-import           System.Exit
-import           System.IO
+import Options.Applicative
+  ( ReadM, Parser, value, help, long, metavar, switch, helper, fullDesc, info
+  , header, short, (<|>), eitherReader, execParser
+  )
+import System.Directory (getHomeDirectory)
+import System.Environment (lookupEnv)
+import System.Environment.XDG.BaseDir (getUserConfigFile)
+import System.Exit (exitFailure, exitSuccess)
+import System.IO (hPutStr, hPutStrLn, stderr)
 -- explicit package import since hledger-lib defines the same module
 import qualified "hledger-iadd" Text.Megaparsec.Compat as P
 
-import           Brick.Widgets.HelpMessage
-import           Brick.Widgets.CommentDialog
-import           DateParser
-import           ConfigParser hiding (parseConfigFile)
-import           Model
-import           View
+import Brick.Widgets.CommentDialog
+import Brick.Widgets.HelpMessage
+import ConfigParser hiding (parseConfigFile)
+import DateParser
+import Model
+import View
 
-import           Data.Version (showVersion)
+import Data.Version (showVersion)
 import qualified Paths_hledger_iadd as Paths
 
 data AppState = AppState
@@ -493,7 +507,7 @@ main = do
     Left err -> do
       hPutStr stderr "Could not parse date format: "
       T.hPutStr stderr err
-      exitWith (ExitFailure 1)
+      exitFailure
     Right res -> return res
 
   let path = runIdentity $ optLedgerFile opts
