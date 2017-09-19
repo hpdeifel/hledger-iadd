@@ -1,3 +1,10 @@
+# 1.2.6
+
+  - Fix build with hledger-lib >= 1.3.1
+  - Support for megaparsec-6.1
+  - Support for brick <= 0.24
+  - Fix test suite with ghc 8.2
+
 # 1.2.5
 
   - Fix broken release tarball
