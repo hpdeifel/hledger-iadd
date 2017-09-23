@@ -31,7 +31,7 @@ viewState (AccountQuestion trans comment) = txt $
 viewState (AmountQuestion acc trans comment) = txt $
   T.pack (HL.showTransaction trans) <> "  " <> acc
   <> viewComment comment
-viewState (FinalQuestion trans) = str $
+viewState (FinalQuestion trans _) = str $
   HL.showTransaction trans
 
 viewQuestion :: Step -> Widget n
@@ -41,8 +41,10 @@ viewQuestion (AccountQuestion trans _) = str $
   "Account " ++ show (numPostings trans + 1)
 viewQuestion (AmountQuestion _ trans _) = str $
   "Amount " ++ show (numPostings trans + 1)
-viewQuestion (FinalQuestion _) = txt $
-  "Add this transaction to the journal? Y/n"
+viewQuestion (FinalQuestion _ duplicate) = txt $
+  "Add this transaction to the journal?"
+  <> (if duplicate then " (warning: duplicate)" else "") -- TODO Add better UI for duplicates
+  <> " Y/n"
 
 viewContext :: (Ord n, Show n) => List n Text -> Widget n
 viewContext = renderList renderItem True

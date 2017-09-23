@@ -291,8 +291,8 @@ doNextStep useSelected as = do
                 -- Furthermore, don't save the input if the FinalQuestion is
                 -- answered by 'n' (for no).
                 , asInputHistory = case (asStep as,s') of
-                    (FinalQuestion _, _) -> asInputHistory as
-                    (_, FinalQuestion _) -> asInputHistory as
+                    (FinalQuestion _ _, _) -> asInputHistory as
+                    (_, FinalQuestion _ _) -> asInputHistory as
                     _                    -> inputText : asInputHistory as
                 }
 

@@ -16,6 +16,7 @@ module Model
 
        -- * Helpers exported for easier testing
        , accountsByFrequency
+       , isDuplicateTransaction
        ) where
 
 import           Data.Function
@@ -33,12 +34,13 @@ import           AmountParser
 import           DateParser
 
 type Comment = Text
+type Duplicate = Bool
 
 data Step = DateQuestion Comment
           | DescriptionQuestion Day Comment
           | AccountQuestion HL.Transaction Comment
           | AmountQuestion HL.AccountName HL.Transaction Comment
-          | FinalQuestion HL.Transaction
+          | FinalQuestion HL.Transaction Duplicate
           deriving (Eq, Show)
 
 
@@ -63,7 +65,7 @@ nextStep journal dateFormat entryText current = case current of
                                        "" -- empty comment
   AccountQuestion trans comment
     | T.null (fromEither entryText) && transactionBalanced trans
-      -> return $ Right $ Step $ FinalQuestion trans
+      -> return $ Right $ Step $ FinalQuestion trans (isDuplicateTransaction journal trans)
     | T.null (fromEither entryText)  -- unbalanced
       -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
@@ -74,7 +76,7 @@ nextStep journal dateFormat entryText current = case current of
       let newPosting = post' name amount comment
       in AccountQuestion (addPosting newPosting trans) ""
 
-  FinalQuestion trans
+  FinalQuestion trans _
     | fromEither entryText == "y" -> return $ Right $ Finished trans
     | otherwise -> return $ Right $ Step $ AccountQuestion trans ""
 
@@ -89,7 +91,7 @@ undo current = case current of
     []     -> DescriptionQuestion (HL.tdate trans) (HL.tcomment trans)
     ps -> AmountQuestion (HL.paccount (last ps)) trans { HL.tpostings = init ps } (HL.pcomment (last ps))
   AmountQuestion _ trans comment -> Right $ AccountQuestion trans comment
-  FinalQuestion trans -> undo (AccountQuestion trans "")
+  FinalQuestion trans _ -> undo (AccountQuestion trans "")
 
 context :: HL.Journal -> MatchAlgo -> DateFormat -> Text -> Step -> IO [Text]
 context _ _ dateFormat entryText (DateQuestion _) = parseDateWithToday dateFormat entryText >>= \case
@@ -103,7 +105,7 @@ context j matchAlgo _ entryText (AccountQuestion _ _) = return $
   in  filter (matches matchAlgo entryText) names
 context journal _ _ entryText (AmountQuestion _ _ _) = return $
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount journal entryText
-context _ _ _ _  (FinalQuestion _) = return []
+context _ _ _ _  (FinalQuestion _ _) = return []
 
 -- | Suggest the initial text of the entry box for each step
 --
@@ -128,7 +130,7 @@ suggest journal _ (AmountQuestion account trans _) = return $ fmap (T.pack . HL.
         -> HL.pamount <$> (findPostingByAcc account last)
       | otherwise
         -> Just $ negativeAmountSum trans
-suggest _ _ (FinalQuestion _) = return $ Just "y"
+suggest _ _ (FinalQuestion _ _) = return $ Just "y"
 
 getCurrentComment :: Step -> Comment
 getCurrentComment step = case step of
@@ -136,7 +138,7 @@ getCurrentComment step = case step of
   DescriptionQuestion _ c -> c
   AccountQuestion _ c -> c
   AmountQuestion _ _ c -> c
-  FinalQuestion trans -> HL.tcomment trans
+  FinalQuestion trans _ -> HL.tcomment trans
 
 setCurrentComment :: Comment -> Step -> Step
 setCurrentComment comment step = case step of
@@ -144,7 +146,7 @@ setCurrentComment comment step = case step of
   DescriptionQuestion date _ -> DescriptionQuestion date comment
   AccountQuestion trans _ -> AccountQuestion trans comment
   AmountQuestion trans name _ -> AmountQuestion trans name comment
-  FinalQuestion trans -> FinalQuestion trans { HL.tcomment = comment }
+  FinalQuestion trans duplicate -> FinalQuestion trans { HL.tcomment = comment } duplicate
 
 getTransactionComment :: Step -> Comment
 getTransactionComment step = case step of
@@ -152,7 +154,7 @@ getTransactionComment step = case step of
   DescriptionQuestion _ c -> c
   AccountQuestion trans _ -> HL.tcomment trans
   AmountQuestion _ trans _ -> HL.tcomment trans
-  FinalQuestion trans -> HL.tcomment trans
+  FinalQuestion trans _ -> HL.tcomment trans
 
 setTransactionComment :: Comment -> Step -> Step
 setTransactionComment comment step = case step of
@@ -162,7 +164,7 @@ setTransactionComment comment step = case step of
     AccountQuestion (trans { HL.tcomment = comment }) comment'
   AmountQuestion name trans comment' ->
     AmountQuestion name (trans { HL.tcomment = comment }) comment'
-  FinalQuestion trans -> FinalQuestion trans { HL.tcomment = comment }
+  FinalQuestion trans duplicate -> FinalQuestion trans { HL.tcomment = comment } duplicate
 
 -- | Returns true if the pattern is not empty and all of its words occur in the string
 --
@@ -308,6 +310,79 @@ accountsByFrequency journal =
     insertOrPlusOne = HM.alter (Just . maybe 1 (+1))
     insertIfNotPresent account = HM.insertWith (flip const) account 0
     subaccounts m = HL.expandAccountNames (HM.keys m)
+
+-- | Deterimine if a given transaction already occurs in the journal
+--
+-- This function ignores certain attributes of transactions, postings and
+-- amounts that are either artifacts of knot-tying or are purely for
+-- presentation.
+--
+-- See the various ...attributes functions in the where clause for details.
+isDuplicateTransaction :: HL.Journal -> HL.Transaction -> Bool
+isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.jtxns journal)
+  where
+    -- | Transaction attributes that are compared to determine duplicates
+    transactionAttributes =
+      [ cmp HL.tdate, cmp HL.tdate2, cmp HL.tdescription, cmp HL.tstatus
+      , cmp HL.tcode, cmpPostings `on` HL.tpostings
+      ]
+
+    -- | Posting attributes that are compared to determine duplicates
+    postingAttributes =
+      [ cmp HL.pdate, cmp HL.pdate2, cmp HL.pstatus, cmp HL.paccount
+      , cmpMixedAmount `on` HL.pamount, cmpPType `on` HL.ptype
+      , cmp HL.pbalanceassertion
+      ]
+
+    -- | Ammount attributes that are compared to determine duplicates
+    amountAttributes =
+      [ cmp HL.acommodity, cmp HL.aprice, cmp HL.aquantity ]
+
+    -- | Compare two transactions but ignore unimportant details
+    cmpTransaction :: HL.Transaction -> HL.Transaction -> Ordering
+    cmpTransaction = lexical transactionAttributes
+
+    
+    -- | Compare two posting lists of postings by sorting them deterministically
+    -- and then compare correspondings list elements
+    cmpPostings :: [HL.Posting] -> [HL.Posting] -> Ordering
+    cmpPostings ps1 ps2 =
+      mconcat (zipWith (lexical postingAttributes) (sortPostings ps1) (sortPostings ps2))
+
+    -- | Compare two posting styles (this should really be an Eq instance)
+    cmpPType :: HL.PostingType -> HL.PostingType -> Ordering
+    cmpPType = compare `on` pTypeToInt
+      where
+        pTypeToInt :: HL.PostingType -> Int
+        pTypeToInt HL.RegularPosting = 0
+        pTypeToInt HL.VirtualPosting = 1
+        pTypeToInt HL.BalancedVirtualPosting = 2
+
+    -- | Compare two amounts ignoring unimportant details
+    cmpAmount :: HL.Amount -> HL.Amount -> Ordering
+    cmpAmount = lexical amountAttributes
+
+    -- | Compare two mixed amounts by first sorting the individual amounts
+    -- deterministically and then comparing them one-by-one.
+    cmpMixedAmount :: HL.MixedAmount -> HL.MixedAmount -> Ordering
+    cmpMixedAmount (HL.Mixed as1) (HL.Mixed as2) =
+      let
+        sortedAs1 = sortBy cmpAmount as1
+        sortedAs2 = sortBy cmpAmount as2
+      in
+        mconcat $
+          compare (length as1) (length as2) : zipWith cmpAmount sortedAs1 sortedAs2
+
+    sortPostings :: [HL.Posting] -> [HL.Posting]
+    sortPostings = sortBy (lexical postingAttributes)
+
+    -- | Shortcut for 'compare `on`'
+    cmp :: Ord b => (a -> b) -> a -> a -> Ordering
+    cmp f = compare `on` f
+
+    -- | Apply two things with multiple predicats and combine the results lexicographically
+    lexical :: [a -> b -> Ordering] -> a -> b -> Ordering
+    lexical fs x y = mconcat (map (\f -> f x y) fs)
 
 fromEither :: Either a a -> a
 fromEither = either id id
