@@ -22,6 +22,7 @@ spec = do
   describe "accountsByFrequency" accByFreqSpec
   describe "setCurrentComment" setCurrentCommentSpec
   describe "setTransactionComment" setTransactionCommentSpec
+  describe "isDuplicateTransaction" isDuplicateTransactionSpec
 
 
 suggestSpec :: Spec
@@ -104,7 +105,7 @@ setCurrentCommentSpec = do
     worksOn (AmountQuestion "foo" HL.nulltransaction "")
 
   it "works at the final prompt" $
-    worksOn (FinalQuestion HL.nulltransaction)
+    worksOn (FinalQuestion HL.nulltransaction False)
 
   where
     worksOn :: Step -> Expectation
@@ -127,13 +128,75 @@ setTransactionCommentSpec = do
     worksOn (AmountQuestion "foo" HL.nulltransaction "")
 
   it "works at the final prompt" $
-    worksOn (FinalQuestion HL.nulltransaction)
+    worksOn (FinalQuestion HL.nulltransaction False)
 
   where
     worksOn :: Step -> Expectation
     worksOn step =
       let comment = "a fancy comment"
       in getTransactionComment (setTransactionComment comment step) `shouldBe` comment
+
+isDuplicateTransactionSpec :: Spec
+isDuplicateTransactionSpec = do
+  it "considers exact copies as duplicates" $
+    let trans = ((2017,9,23), "Test", [("Test", 1), ("Toast", -1)])
+    in
+      isDuplicateTransaction (mkJournal [trans]) (mkTransaction trans)
+
+  it "ignores the order of postings" $
+    let
+      t1 = ((2017,9,23), "Test", [("Test", 1), ("Toast", -1)])
+      t2 = ((2017,9,23), "Test", [("Toast", -1), ("Test", 1)])
+    in
+      isDuplicateTransaction (mkJournal [t1]) (mkTransaction t2)
+
+  it "ignores comments and tags" $ do
+    let
+      t1 = mkTransaction ((2017,9,23), "Test", [("Test", 1), ("Toast", -1)])
+      t2 = t1 { HL.tcomment = "Foo" }
+      t3 = t1 { HL.ttags = [("Foo", "Bar")] }
+
+    isDuplicateTransaction (HL.addTransaction t2 HL.nulljournal) t1 `shouldBe` True
+    isDuplicateTransaction (HL.addTransaction t3 HL.nulljournal) t1 `shouldBe` True
+      
+  it "considers date and description" $ do
+    let
+      t1 = ((2017,9,23), "Test", [("Test", 1), ("Toast", -1)])
+      t2 = ((2017,9,24), "Test", [("Test", 1), ("Toast", -1)])
+      t3 = ((2017,9,23), "Foo", [("Test", 1), ("Toast", -1)])
+
+    isDuplicateTransaction (mkJournal [t1]) (mkTransaction t2) `shouldBe` False
+    isDuplicateTransaction (mkJournal [t1]) (mkTransaction t3) `shouldBe` False
+      
+
+  it "considers date, amount and account of postings" $ do
+    let
+      t1 = ((2017,9,23), "Test", [("Test", 1), ("Toast", -1)])
+      t2 = ((2017,9,23), "Test", [("Foo", 1), ("Toast", -1)])
+      t3 = ((2017,9,23), "Test", [("Test", 2), ("Toast", -1)])
+      t4 = ((2017,9,23), "Test", [("Test", 1), ("Toast", -1), ("Foo", 2), ("Bar", -2)])
+
+      t5p1 = (mkPosting ("Test", 1)) { HL.pdate = Just (fromGregorian 2017 9 23 )}
+      t5 = (mkTransaction t1) { HL.tpostings = [t5p1, mkPosting ("Toast", -1)]}
+
+    isDuplicateTransaction (mkJournal [t1]) (mkTransaction t2) `shouldBe` False
+    isDuplicateTransaction (mkJournal [t1]) (mkTransaction t3) `shouldBe` False
+    isDuplicateTransaction (mkJournal [t1]) (mkTransaction t4) `shouldBe` False
+    isDuplicateTransaction (mkJournal [t1]) t5 `shouldBe` False
+
+  it "ignores amount presentation" $ do
+    let a1 = (HL.eur 0.5) { HL.astyle = HL.amountstyle}
+        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = 15} }
+
+        p1 = mkPosting ("Test", -1)
+        p2 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.Mixed [a1] }
+        p3 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.Mixed [a2] }
+
+        t0 = mkTransaction ((2017,9,23), "Test", [])
+        t1 = t0 { HL.tpostings = [p1,p2,p2] }
+        t2 = t0 { HL.tpostings = [p1,p3,p3] }
+
+    isDuplicateTransaction (HL.addTransaction t1 HL.nulljournal) t2 `shouldBe` True
 
 -- Helpers
 
@@ -154,10 +217,9 @@ mkTransaction ((year,month,day), desc, postings) = HL.nulltransaction
   , HL.tpostings = map mkPosting postings
   }
 
-  where
-    mkPosting :: (Text, Int) -> HL.Posting
-    mkPosting (account, amount) = HL.nullposting
-      { HL.paccount = account
-      , HL.pamount = HL.mixed [HL.eur (fromIntegral amount)]
-      }
+mkPosting :: (Text, Int) -> HL.Posting
+mkPosting (account, amount) = HL.nullposting
+  { HL.paccount = account
+  , HL.pamount = HL.mixed [HL.eur (fromIntegral amount)]
+  }
 
