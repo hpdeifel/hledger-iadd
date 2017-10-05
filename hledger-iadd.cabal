@@ -113,6 +113,7 @@ test-suite spec
   other-modules:      DateParserSpec
                     , AmountParserSpec
                     , ModelSpec
+                    , ConfigSpec
   default-language:   Haskell2010
   build-depends:      base >= 4.8 && < 5
                     , hledger-iadd
