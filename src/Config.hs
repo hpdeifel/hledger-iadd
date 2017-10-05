@@ -9,6 +9,7 @@ module Config
   , ledgerFile
   , dateFormat
   , matchAlgo
+  , colorscheme
   , defaultConfig
   , parseConfigText
   , parseConfigFile
@@ -29,6 +30,8 @@ import           Lens.Micro.Platform
 import           System.Directory (getHomeDirectory)
 import           Text.Toml
 
+import           UI.Theme
+
 data MatchAlgo = Fuzzy | Substrings
   deriving (Eq, Show)
 
@@ -45,6 +48,7 @@ data Config = Config
   { _ledgerFile :: FilePath
   , _dateFormat :: String
   , _matchAlgo :: MatchAlgo
+  , _colorscheme :: Colorscheme
   } deriving (Show, Eq)
 
 makeLenses ''Config
@@ -69,6 +73,7 @@ defaultConfig = Config
   { _ledgerFile = "~/.hledger.journal"
   , _dateFormat = "[[%y/]%m/]%d"
   , _matchAlgo = Substrings
+  , _colorscheme = defaultColorscheme
   }
 
 prettyPrintConfig :: Config -> Text
@@ -90,6 +95,7 @@ instance FromJSON Config where
     <**> (c .:? "file" <&> optionally ledgerFile)
     <**> (c .:? "date-format" <&> optionally dateFormat)
     <**> (c .:? "completion-engine" <&> optionally matchAlgo)
+    <**> (c .:? "colors" <&> optionally colorscheme)
 
 
 optionally :: ASetter s t b b -> Maybe b -> s -> t

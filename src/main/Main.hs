@@ -7,8 +7,8 @@
 module Main where
 
 import Brick
-  ( Widget, App(..), AttrMap, BrickEvent(..), Next, EventM
-  , (<=>), (<+>), txt, continue, halt, attrMap, on, fg
+  ( Widget, App(..), BrickEvent(..), Next, EventM
+  , (<=>), (<+>), txt, continue, halt
   , defaultMain, showFirstCursor, padBottom, Padding(Max)
   )
 import Brick.Widgets.BetterDialog (dialog)
@@ -18,12 +18,10 @@ import Brick.Widgets.Edit.EmacsBindings
   , editorText
   )
 import Brick.Widgets.List
-  ( List, listMoveDown, listMoveUp, listMoveTo, listSelectedElement
-  , listSelectedAttr, list
+  ( List, listMoveDown, listMoveUp, listMoveTo, listSelectedElement, list
   )
 import Brick.Widgets.List.Utils (listSimpleReplace)
-import Graphics.Vty
-  (Event(EvKey), Modifier(MCtrl,MMeta), Key(..), defAttr, black, white, green)
+import Graphics.Vty (Event(EvKey), Modifier(MCtrl,MMeta), Key(..))
 
 import Control.Monad (msum, when, void)
 import Control.Monad.IO.Class (liftIO)
@@ -54,6 +52,7 @@ import DateParser
 import Model
 import View
 import Config
+import UI.Theme
 
 import Data.Version (showVersion)
 import qualified Paths_hledger_iadd as Paths
@@ -318,12 +317,6 @@ asMaybe t
   | T.null t  = Nothing
   | otherwise = Just t
 
-attrs :: AttrMap
-attrs = attrMap defAttr
-  [ (listSelectedAttr, black `on` white)
-  , (helpAttr <> "title", fg green)
-  ]
-
 clearEdit :: Editor n -> Editor n
 clearEdit = setEdit ""
 
@@ -450,14 +443,14 @@ main = do
           algo = config ^. matchAlgo
           as = AppState edit (DateQuestion "") journal (ctxList V.empty) sugg welcome path date algo NoDialog []
 
-      void $ defaultMain app as
+      void $ defaultMain (app config) as
 
-    where app = App { appDraw = draw
-                    , appChooseCursor = showFirstCursor
-                    , appHandleEvent = event
-                    , appAttrMap = const attrs
-                    , appStartEvent = return
-                    } :: App AppState Event Name
+    where app config = App { appDraw = draw
+                           , appChooseCursor = showFirstCursor
+                           , appHandleEvent = event
+                           , appAttrMap = const $ buildAttrMap (config ^. colorscheme)
+                           , appStartEvent = return
+                           } :: App AppState Event Name
 
 expand :: Widget n -> Widget n
 expand = padBottom Max
