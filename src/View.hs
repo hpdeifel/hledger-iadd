@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module View
   ( viewState
@@ -54,7 +54,7 @@ viewSuggestion Nothing = txt ""
 viewSuggestion (Just t) = txt $ " (" <> t <> ")"
 
 renderItem :: Bool -> Text -> Widget n
-renderItem True = withAttr listSelectedAttr . txt
+renderItem True = withAttr listSelectedAttr . padRight Max . txt
 renderItem False = txt
 
 numPostings :: HL.Transaction -> Int
