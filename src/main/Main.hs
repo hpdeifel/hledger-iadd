@@ -25,13 +25,11 @@ import Brick.Widgets.List.Utils (listSimpleReplace)
 import Graphics.Vty
   (Event(EvKey), Modifier(MCtrl,MMeta), Key(..), defAttr, black, white, green)
 
-import Control.Exception (SomeException, try)
 import Control.Monad (msum, when, void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (runExceptT)
-import Data.Functor.Identity (Identity(..), runIdentity)
-import Data.Maybe (fromMaybe, fromJust)
-import Data.Monoid ((<>), First(..), getFirst)
+import Data.Maybe (fromMaybe)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -39,26 +37,23 @@ import Data.Text.Zipper (gotoEOL, textZipper)
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (^.) ,ASetter,set,over,to)
 import qualified Options.Applicative as OA
 import Options.Applicative
   ( ReadM, Parser, value, help, long, metavar, switch, helper, fullDesc, info
-  , header, short, (<|>), eitherReader, execParser
+  , header, short, eitherReader, execParser
   )
-import System.Directory (getHomeDirectory)
 import System.Environment (lookupEnv)
 import System.Environment.XDG.BaseDir (getUserConfigFile)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStr, hPutStrLn, stderr)
--- explicit package import since hledger-lib defines the same module
-import qualified "hledger-iadd" Text.Megaparsec.Compat as P
 
 import Brick.Widgets.CommentDialog
 import Brick.Widgets.HelpMessage
-import ConfigParser hiding (parseConfigFile)
 import DateParser
 import Model
 import View
+import Config
 
 import Data.Version (showVersion)
 import qualified Paths_hledger_iadd as Paths
@@ -343,60 +338,16 @@ addToJournal trans path = appendFile path (HL.showTransaction trans)
 -- Command line and config parsing
 --------------------------------------------------------------------------------
 
-data CommonOptions f = CommonOptions
-  { optLedgerFile :: f FilePath
-  , optDateFormat :: f String
-  , optMatchAlgo  :: f MatchAlgo
-  }
-
-instance Monoid (CommonOptions Maybe) where
-  mappend opt1 opt2 =
-    let opt1' = optNatTrans First opt1
-        opt2' = optNatTrans First opt2
-    in optNatTrans getFirst $ CommonOptions
-       { optLedgerFile = optLedgerFile opt1' <> optLedgerFile opt2'
-       , optDateFormat = optDateFormat opt1' <> optDateFormat opt2'
-       , optMatchAlgo = optMatchAlgo opt1' <> optMatchAlgo opt2'
-       }
-
-  mempty = CommonOptions Nothing Nothing Nothing
-
-optNatTrans :: (forall a. f a -> g a) -> CommonOptions f -> CommonOptions g
-optNatTrans nat opts = CommonOptions
-  { optLedgerFile = nat $ optLedgerFile opts
-  , optDateFormat = nat $ optDateFormat opts
-  , optMatchAlgo = nat $ optMatchAlgo opts
-  }
-
-optFromJust :: CommonOptions Identity -> CommonOptions Maybe -> CommonOptions Identity
-optFromJust def opts =
-  optNatTrans (Identity . fromJust) ( opts <> optNatTrans (Just . runIdentity) def)
-
 data CmdLineOptions = CmdLineOptions
-  { cmdCommon :: CommonOptions Maybe
+  { cmdLedgerFile :: Maybe FilePath
+  , cmdDateFormat :: Maybe String
+  , cmdMatchAlgo :: Maybe MatchAlgo
   , cmdDumpConfig :: Bool
   , cmdVersion :: Bool
   }
 
-data ConfOptions = ConfOptions { confCommon :: CommonOptions Maybe }
-
-defaultOptions :: FilePath -> CommonOptions Identity
-defaultOptions home = CommonOptions
-  { optLedgerFile = Identity (ledgerPath home)
-  , optDateFormat = Identity "[[%y/]%m/]%d"
-  , optMatchAlgo = Identity Substrings
-  }
-
-ledgerPath :: FilePath -> FilePath
-ledgerPath home = home <> "/.hledger.journal"
-
-configPath :: IO FilePath
-configPath = getUserConfigFile "hledger-iadd" "config.conf"
-
--- | Megaparsec parser for MatchAlgo, used for config file parsing
-parseMatchAlgo :: OParser MatchAlgo
-parseMatchAlgo =  (P.string "fuzzy" *> pure Fuzzy)
-              <|> (P.string "substrings" *> pure Substrings)
+getConfigPath :: IO FilePath
+getConfigPath = getUserConfigFile "hledger-iadd" "config.conf"
 
 -- | ReadM parser for MatchAlgo, used for command line option parsing
 readMatchAlgo :: ReadM MatchAlgo
@@ -407,61 +358,27 @@ readMatchAlgo = eitherReader reader
       | str == "substrings" = return Substrings
       | otherwise = Left "Expected \"fuzzy\" or \"substrings\""
 
--- | Parser for our config file
-confParser :: CommonOptions Identity -> OptParser ConfOptions
-confParser def = fmap ConfOptions $ CommonOptions
-  -- TODO Convert leading tilde to home
-  <$> (Just <$> option "file" (runIdentity $ optLedgerFile def) "Path to the journal file")
-  <*> (Just <$> option "date-format" (runIdentity $ optDateFormat def) "Format used to parse dates")
-  <*> (Just <$> customOption "completion-engine" matchAlgo (T.toLower $ T.pack $ show matchAlgo)
-      ( "Algorithm used to find completions for account names. Possible values are:\n"
-      <> "  - substrings: Every word in the search string has to occur somewhere in the account name\n"
-      <> "  - fuzzy: All letters from the search string have to appear in the name in the same order"
-      )
-      "string"
-      parseMatchAlgo
-      )
-
-  where matchAlgo = runIdentity (optMatchAlgo def)
-
--- | IO Action to read and parse config file
-parseConfigFile :: IO ConfOptions
-parseConfigFile = do
-  path <- configPath
-  home <- getHomeDirectory
-  let def = defaultOptions home
-
-  try (T.readFile path) >>= \case
-    Left (_ :: SomeException) -> return (parserDefault $ confParser def)
-    Right res -> case parseConfig path res (confParser def) of
-      Left err -> do
-        putStr (P.parseErrorPretty err)
-        exitFailure
-      Right res' -> return res'
-
 -- | command line option parser
 cmdOptionParser :: Parser CmdLineOptions
 cmdOptionParser = CmdLineOptions
-  <$> (CommonOptions
-       <$> OA.option (Just <$> OA.str)
-           (  long "file"
-           <> short 'f'
-           <> metavar "FILE"
-           <> value Nothing
-           <> help "Path to the journal file"
-           )
-       <*> OA.option (Just <$> OA.str)
-             (  long "date-format"
-             <> metavar "FORMAT"
-             <> value Nothing
-             <> help "Format used to parse dates"
-             )
-      <*> OA.option (Just <$> readMatchAlgo)
-            (  long "completion-engine"
-            <> metavar "ENGINE"
-            <> value Nothing
-            <> help "Algorithm for account name completion. Possible values: \"fuzzy\", \"substrings\"")
-      )
+    <$> OA.option (Just <$> OA.str)
+        (  long "file"
+        <> short 'f'
+        <> metavar "FILE"
+        <> value Nothing
+        <> help "Path to the journal file"
+        )
+    <*> OA.option (Just <$> OA.str)
+          (  long "date-format"
+          <> metavar "FORMAT"
+          <> value Nothing
+          <> help "Format used to parse dates"
+          )
+   <*> OA.option (Just <$> readMatchAlgo)
+         (  long "completion-engine"
+         <> metavar "ENGINE"
+         <> value Nothing
+         <> help "Algorithm for account name completion. Possible values: \"fuzzy\", \"substrings\"")
   <*> switch
         ( long "dump-default-config"
        <> help "Print an example configuration file to stdout and exit"
@@ -471,18 +388,25 @@ cmdOptionParser = CmdLineOptions
        <> help "Print version number and exit"
         )
 
-parseEnvVariables :: IO (CommonOptions Maybe)
-parseEnvVariables = do
-  maybeFilePath <- lookupEnv "LEDGER_FILE"
-  return mempty
-    { optLedgerFile = maybeFilePath }
+parseEnvVariables :: IO (Maybe FilePath)
+parseEnvVariables = lookupEnv "LEDGER_FILE"
+
+-- The order of precedence here is:
+-- arguments > environment > config file
+mergeConfig :: CmdLineOptions -> Maybe FilePath -> Config -> Config
+mergeConfig cmd env config = config
+  & maybeSet ledgerFile env
+  & maybeSet ledgerFile (cmdLedgerFile cmd)
+  & maybeSet dateFormat (cmdDateFormat cmd)
+  & maybeSet matchAlgo (cmdMatchAlgo cmd)
+
+  where
+    maybeSet :: ASetter s t a a -> Maybe a -> s -> t
+    maybeSet setter Nothing = over setter id
+    maybeSet setter (Just x) = set setter x
 
 main :: IO ()
 main = do
-  home <- getHomeDirectory
-  path <- configPath
-  let defOpts = defaultOptions home
-
   cmdOpts <- execParser $ info (helper <*> cmdOptionParser) $
                fullDesc <> header "A terminal UI as drop-in replacement for hledger add."
 
@@ -490,27 +414,29 @@ main = do
     putStrLn $ "This is hledger-iadd version " <> showVersion Paths.version
     exitSuccess
 
+  configPath <- getConfigPath
+
   when (cmdDumpConfig cmdOpts) $ do
-    T.putStrLn $ "# Write this to " <> T.pack path <> "\n"
-    T.putStrLn (parserExample $ confParser defOpts)
+    T.putStrLn $ "# Write this to " <> T.pack configPath <> "\n"
+    T.putStr (prettyPrintConfig defaultConfig)
     exitSuccess
 
-  confOpts <- parseConfigFile
+  confOpts <- parseConfigFile configPath >>= \case
+    Left err -> T.hPutStrLn stderr err >> exitFailure
+    Right x -> return x
 
   envOpts <- parseEnvVariables
 
-  -- The order of precedence here is:
-  -- arguments > environment > config file
-  let opts = optFromJust defOpts $ cmdCommon cmdOpts <> envOpts <> confCommon confOpts
+  let config = mergeConfig cmdOpts envOpts confOpts
 
-  date <- case parseDateFormat (T.pack $ runIdentity $ optDateFormat opts) of
+  date <- case parseDateFormat (config ^. dateFormat . to T.pack) of
     Left err -> do
       hPutStr stderr "Could not parse date format: "
       T.hPutStr stderr err
       exitFailure
     Right res -> return res
 
-  let path = runIdentity $ optLedgerFile opts
+  let path = config ^. ledgerFile
   journalContents <- T.readFile path
 
   runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
@@ -521,8 +447,8 @@ main = do
       sugg <- suggest journal date (DateQuestion "")
 
       let welcome = "Welcome! Press F1 (or Alt-?) for help. Exit with Ctrl-d."
-          matchAlgo = runIdentity $ optMatchAlgo opts
-          as = AppState edit (DateQuestion "") journal (ctxList V.empty) sugg welcome path date matchAlgo NoDialog []
+          algo = config ^. matchAlgo
+          as = AppState edit (DateQuestion "") journal (ctxList V.empty) sugg welcome path date algo NoDialog []
 
       void $ defaultMain app as
 

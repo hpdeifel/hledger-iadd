@@ -32,6 +32,7 @@ import qualified Hledger as HL
 
 import           AmountParser
 import           DateParser
+import           Config (MatchAlgo(..))
 
 type Comment = Text
 type Duplicate = Bool
@@ -47,9 +48,6 @@ data Step = DateQuestion Comment
 data MaybeStep = Finished HL.Transaction
                | Step Step
                deriving (Eq, Show)
-
-data MatchAlgo = Fuzzy | Substrings
-  deriving (Eq, Show)
 
 nextStep :: HL.Journal -> DateFormat -> Either Text Text -> Step -> IO (Either Text MaybeStep)
 nextStep journal dateFormat entryText current = case current of
