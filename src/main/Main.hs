@@ -337,7 +337,13 @@ setEdit content edit = edit & editContentsL .~ zipper
   where zipper = gotoEOL (textZipper [content] (Just 1))
 
 addToJournal :: HL.Transaction -> FilePath -> IO ()
-addToJournal trans path = appendFile path (HL.showTransaction trans)
+addToJournal trans path = appendFile path (moveEmptyLine $ HL.showTransaction trans)
+  where
+    -- showTransaction adds an empty line to the end of the transaction. We want
+    -- the empty line to be at the start instead, to allow it to be added to a
+    -- journal that doesn't end with a newline.
+    moveEmptyLine :: String -> String
+    moveEmptyLine = unlines . ("":) . init . lines
 
 --------------------------------------------------------------------------------
 -- Command line and config parsing
