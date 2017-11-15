@@ -26,13 +26,13 @@ viewState (DescriptionQuestion date comment) = txt $
   T.pack (formatTime defaultTimeLocale "%Y/%m/%d" date)
   <> viewComment comment
 viewState (AccountQuestion trans comment) = txt $
-  T.pack (HL.showTransaction trans)
+  T.pack (HL.showTransactionUnelided trans)
   <> viewComment comment
 viewState (AmountQuestion acc trans comment) = txt $
-  T.pack (HL.showTransaction trans) <> "  " <> acc
+  T.pack (HL.showTransactionUnelided trans) <> "  " <> acc
   <> viewComment comment
 viewState (FinalQuestion trans _) = str $
-  HL.showTransaction trans
+  HL.showTransactionUnelided trans
 
 viewQuestion :: Step -> Widget n
 viewQuestion (DateQuestion _) = txt "Date"
