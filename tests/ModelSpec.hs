@@ -89,6 +89,10 @@ accByFreqSpec = do
     let j = mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2), ("x:y", 3), ("x:z", 4)]) ]
     accountsByFrequency j `shouldBe` ["x:y", "x:z", "x"]
 
+  it "includes accounts from the 'account directive'" $ do
+    let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jaccounts = ["foo:bar"]}
+    accountsByFrequency j `shouldContain` ["foo:bar", "foo"]
+
 
 setCurrentCommentSpec :: Spec
 setCurrentCommentSpec = do

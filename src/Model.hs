@@ -299,11 +299,13 @@ descUses journal = compare `on` (Down . flip HM.lookup usesMap)
 accountsByFrequency :: HL.Journal -> [HL.AccountName]
 accountsByFrequency journal =
   let
-    accounts = map HL.paccount (HL.journalPostings journal)
-    frequencyMap :: HM.HashMap HL.AccountName Int = foldr insertOrPlusOne HM.empty accounts
+    usedAccounts = map HL.paccount (HL.journalPostings journal)
+    frequencyMap :: HM.HashMap HL.AccountName Int = foldr insertOrPlusOne HM.empty usedAccounts
     mapWithSubaccounts = foldr insertIfNotPresent frequencyMap (subaccounts frequencyMap)
+    declaredAccounts = HL.expandAccountNames (HL.jaccounts journal)
+    mapWithDeclared = foldr insertIfNotPresent mapWithSubaccounts declaredAccounts
   in
-    map fst (sortBy (compare `on` (Down . snd)) (HM.toList mapWithSubaccounts))
+    map fst (sortBy (compare `on` (Down . snd)) (HM.toList mapWithDeclared))
 
 
   where
