@@ -1,3 +1,11 @@
+# 1.3.0
+
+  - Detect duplicate transactions and warn about them
+  - Add empty line before transactions when writing to journal
+  - Don't elide the last amount in transactions
+  - Support account directive for account completion
+  - Bugfixes and dependency bumps
+
 # 1.2.6
 
   - Fix build with hledger-lib >= 1.3.1
