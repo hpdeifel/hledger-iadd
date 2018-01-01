@@ -1,3 +1,8 @@
+# 1.3.1
+
+  - Support brick <= 0.32
+  - Support megaparsec <= 6.4
+
 # 1.3.0
 
   - Detect duplicate transactions and warn about them
@@ -84,3 +89,7 @@
 # 1.0
 
  - Initial release
+
+<!-- Local Variables: -->
+<!-- mode: markdown -->
+<!-- End: -->
