@@ -44,7 +44,7 @@ module ConfigParser
        , OptionArgument()
        ) where
 
-import           Control.Applicative
+import           Control.Applicative hiding (many, some)
 import           Control.Applicative.Free
 import           Control.Monad
 import           Data.Functor.Identity
