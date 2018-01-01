@@ -18,7 +18,7 @@ module DateParser
        , weekDay
        ) where
 
-import           Control.Applicative
+import           Control.Applicative hiding (many, some)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)

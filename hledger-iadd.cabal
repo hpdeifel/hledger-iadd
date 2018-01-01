@@ -57,8 +57,8 @@ library
                      , Text.Megaparsec.Compat
   default-language:    Haskell2010
   build-depends:       base >= 4.8 && < 5
-                     , hledger-lib >= 1.0 && < 1.5
-                     , brick >= 0.17 && < 0.31
+                     , hledger-lib >= 1.0 && < 1.6
+                     , brick >= 0.17 && < 0.33
                      , vty >= 5.4
                      , text
                      , microlens
@@ -67,7 +67,7 @@ library
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
-                     , megaparsec >= 5.0 && <6.4
+                     , megaparsec >= 5.0 && <6.5
                      , containers
                      , optparse-applicative
                      , directory
@@ -85,8 +85,8 @@ executable hledger-iadd
   default-language:    Haskell2010
   build-depends:       base >= 4.8 && < 5
                      , hledger-iadd
-                     , hledger-lib >= 1.0 && < 1.5
-                     , brick >= 0.17 && < 0.31
+                     , hledger-lib >= 1.0 && < 1.6
+                     , brick >= 0.17 && < 0.33
                      , vty >= 5.4
                      , text
                      , microlens
@@ -100,7 +100,7 @@ executable hledger-iadd
                      , xdg-basedir
                      , unordered-containers
                      , free >= 4.12.4
-                     , megaparsec >= 5.0 && <6.4
+                     , megaparsec >= 5.0 && <6.5
   ghc-options:         -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
 
 test-suite spec
@@ -114,7 +114,7 @@ test-suite spec
   default-language:   Haskell2010
   build-depends:      base >= 4.8 && < 5
                     , hledger-iadd
-                    , hledger-lib >= 1.0 && < 1.5
+                    , hledger-lib >= 1.0 && < 1.6
                     , text
                     , transformers >= 0.3
                     , time >= 1.5
@@ -123,6 +123,6 @@ test-suite spec
                     , QuickCheck
                     , text-format
                     , free >= 4.12.4
-                    , megaparsec >= 5.0 && <6.4
+                    , megaparsec >= 5.0 && <6.5
                     , text-zipper >= 0.10
   ghc-options:        -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
