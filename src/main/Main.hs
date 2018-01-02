@@ -9,10 +9,11 @@ module Main where
 import Brick
   ( Widget, App(..), AttrMap, BrickEvent(..), Next, EventM
   , (<=>), (<+>), txt, continue, halt, attrMap, on, fg
-  , defaultMain, showFirstCursor, padBottom, Padding(Max)
+  , defaultMain, showFirstCursor, padBottom, Padding(Max,Pad)
+  , vLimit, padTopBottom, vSize, Size(Fixed), padAll, padLeft
   )
 import Brick.Widgets.BetterDialog (dialog)
-import Brick.Widgets.Border (hBorder)
+import Brick.Widgets.Border (hBorder, vBorder)
 import Brick.Widgets.Edit.EmacsBindings
   ( Editor, renderEditor, handleEditorEvent, getEditContents, editContentsL
   , editorText
@@ -55,6 +56,7 @@ import qualified "hledger-iadd" Text.Megaparsec.Compat as P
 
 import Brick.Widgets.CommentDialog
 import Brick.Widgets.HelpMessage
+import Brick.Widgets.Border.Utils (borderLeft)
 import ConfigParser hiding (parseConfigFile)
 import DateParser
 import Model
@@ -128,7 +130,8 @@ draw as = case asDialog as of
   CommentDialog _ c -> [renderCommentWidget c, ui]
   NoDialog -> [ui]
 
-  where ui =  viewState (asStep as)
+  where ui =  (txt "New Transaction:")
+          <=> padAll 1 (borderLeft $ padLeft (Pad 1) $ viewState (asStep as))
           <=> hBorder
           <=> (viewQuestion (asStep as)
                <+> viewSuggestion (asSuggestion as)
