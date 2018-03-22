@@ -23,14 +23,15 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Text.Buildable (Buildable,build)
-import           Data.Text.Format hiding (build)
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Builder (Builder, toLazyText)
+import qualified Data.Text.Lazy.Builder as Build
+import qualified Data.Text.Lazy.Builder.Int as Build
 import           Data.Time hiding (parseTime)
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
 import           Text.Megaparsec.Compat
+import           Text.Printf (printf, PrintfArg)
 
 newtype DateFormat = DateFormat [DateSpec]
                    deriving (Eq, Show)
@@ -205,7 +206,7 @@ printDate (DateFormat spec) day = TL.toStrict $ toLazyText $ printDate' spec day
 printDate' :: [DateSpec] -> Day -> Builder
 printDate' [] _ = ""
 printDate' (DateYear:ds) day@(toGregorian -> (y,_,_)) =
-  build y <> printDate' ds day
+  Build.decimal y <> printDate' ds day
 printDate' (DateYearShort:ds) day@(toGregorian -> (y,_,_))
   | y > 2000  = twoDigits (y-2000) <> printDate' ds day
   | otherwise = twoDigits y <> printDate' ds day
@@ -214,9 +215,9 @@ printDate' (DateMonth:ds) day@(toGregorian -> (_,m,_)) =
 printDate' (DateDay:ds) day@(toGregorian -> (_,_,d)) =
   twoDigits d <> printDate' ds day
 printDate' (DateString s:ds) day =
-  build s <> printDate' ds day
+  Build.fromText s <> printDate' ds day
 printDate' (DateOptional opt:ds) day =
   printDate' opt day <> printDate' ds day
 
-twoDigits :: Buildable a => a -> Builder
-twoDigits = left 2 '0'
+twoDigits :: (Integral a, PrintfArg a) => a -> Builder
+twoDigits = Build.fromString . printf "%02d"
