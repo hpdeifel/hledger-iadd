@@ -33,6 +33,7 @@ import Control.Monad.Trans.Except (runExceptT)
 import Data.Functor.Identity (Identity(..), runIdentity)
 import Data.Maybe (fromMaybe, fromJust)
 import Data.Monoid ((<>), First(..), getFirst)
+import qualified Data.Semigroup as Sem
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -358,8 +359,8 @@ data CommonOptions f = CommonOptions
   , optMatchAlgo  :: f MatchAlgo
   }
 
-instance Monoid (CommonOptions Maybe) where
-  mappend opt1 opt2 =
+instance Sem.Semigroup (CommonOptions Maybe) where
+  (<>) opt1 opt2 =
     let opt1' = optNatTrans First opt1
         opt2' = optNatTrans First opt2
     in optNatTrans getFirst $ CommonOptions
@@ -368,6 +369,8 @@ instance Monoid (CommonOptions Maybe) where
        , optMatchAlgo = optMatchAlgo opt1' <> optMatchAlgo opt2'
        }
 
+instance Monoid (CommonOptions Maybe) where
+  mappend = (Sem.<>)
   mempty = CommonOptions Nothing Nothing Nothing
 
 optNatTrans :: (forall a. f a -> g a) -> CommonOptions f -> CommonOptions g

@@ -6,7 +6,7 @@ import           Test.Hspec
 
 import           Control.Monad
 import           Data.List
-import           Data.Monoid
+import           Data.Semigroup ((<>))
 
 import           Data.Text (Text)
 import qualified Data.Text as T

@@ -48,7 +48,7 @@ import           Control.Applicative hiding (many, some)
 import           Control.Applicative.Free
 import           Control.Monad
 import           Data.Functor.Identity
-import           Data.Monoid
+import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T

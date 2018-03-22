@@ -15,7 +15,7 @@ import Brick.Markup
 import Brick.Widgets.Border
 import Graphics.Vty
 import Data.Text (Text)
-import Data.Monoid
+import Data.Monoid ((<>))
 import Data.List
 import Lens.Micro
 

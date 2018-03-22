@@ -21,6 +21,7 @@ module DateParser
 import           Control.Applicative hiding (many, some)
 import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Semigroup as Sem
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -112,7 +113,7 @@ parseDate current (DateFormat spec) text =
 
 -- (y, m, d)
 newtype IncompleteDate a = IDate (a, a, a)
-                       deriving (Monoid, Functor, Show)
+                       deriving (Sem.Semigroup, Monoid, Functor, Show)
 
 data Direction = Future | Past deriving (Eq,Show)
 -- find a date that matches the incomplete date and is as near as possible to

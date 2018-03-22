@@ -11,7 +11,7 @@ module View
 import           Brick
 import           Brick.Widgets.List
 import           Brick.Widgets.WrappedText
-import           Data.Monoid
+import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time hiding (parseTime)

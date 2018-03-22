@@ -9,7 +9,7 @@ module Brick.Widgets.CommentDialog
   , handleCommentEvent
   ) where
 
-import           Data.Monoid
+import           Data.Semigroup ((<>))
 
 import           Brick
 import           Brick.Widgets.Dialog
