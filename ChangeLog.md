@@ -1,3 +1,10 @@
+# 1.3.2
+
+  - Highlight currently constructed transaction
+  - Fix build with GHC 8.4
+  - Support new dependencies
+  - Drop dependency on text-format
+
 # 1.3.1
 
   - Support brick <= 0.32
