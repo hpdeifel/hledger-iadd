@@ -16,14 +16,16 @@ before_install:
 matrix:
   include:
   - env: ARGS=""
-
-  - env: ARGS="--stack-yaml stack-7.10.yaml"
+  - env: ARGS="--stack-yaml stack-8.4.yaml"
+  - env: ARGS="--stack-yaml stack-8.0.yaml"
 
 install:
   - stack +RTS -N2 -RTS setup
   - stack +RTS -N2 -RTS build --only-snapshot
-  - stack +RTS -N2 -RTS --stack-yaml stack-7.10.yaml setup
-  - stack +RTS -N2 -RTS --stack-yaml stack-7.10.yaml build --only-snapshot
+  - stack +RTS -N2 -RTS --stack-yaml stack-8.0.yaml setup
+  - stack +RTS -N2 -RTS --stack-yaml stack-8.0.yaml build --only-snapshot
+  - stack +RTS -N2 -RTS --stack-yaml stack-8.4.yaml setup
+  - stack +RTS -N2 -RTS --stack-yaml stack-8.4.yaml build --only-snapshot
 
 script:
   - stack --version
