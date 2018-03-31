@@ -302,7 +302,7 @@ accountsByFrequency journal =
     usedAccounts = map HL.paccount (HL.journalPostings journal)
     frequencyMap :: HM.HashMap HL.AccountName Int = foldr insertOrPlusOne HM.empty usedAccounts
     mapWithSubaccounts = foldr insertIfNotPresent frequencyMap (subaccounts frequencyMap)
-    declaredAccounts = HL.expandAccountNames (HL.jaccounts journal)
+    declaredAccounts = HL.expandAccountNames (HL.journalAccountNamesDeclared journal)
     mapWithDeclared = foldr insertIfNotPresent mapWithSubaccounts declaredAccounts
   in
     map fst (sortBy (compare `on` (Down . snd)) (HM.toList mapWithDeclared))
