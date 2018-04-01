@@ -1,3 +1,8 @@
+# 1.3.3
+
+  - Support new dependencies
+  - Raise lower bound on hledger-lib to 1.5
+
 # 1.3.2
 
   - Highlight currently constructed transaction
