@@ -2,5 +2,6 @@ flags: {}
 extra-package-dbs: []
 packages:
 - .
-extra-deps: null
+extra-deps:
+  - hledger-lib-1.5
 resolver: lts-9.21
