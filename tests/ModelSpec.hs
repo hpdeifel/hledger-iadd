@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
 
 module ModelSpec (spec) where
 
@@ -90,7 +91,11 @@ accByFreqSpec = do
     accountsByFrequency j `shouldBe` ["x:y", "x:z", "x"]
 
   it "includes accounts from the 'account directive'" $ do
+#if MIN_VERSION_hledger_lib(1,9,0)
+    let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jaccounts = [("foo:bar", Nothing)]}
+#else
     let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jaccounts = ["foo:bar"]}
+#endif
     accountsByFrequency j `shouldContain` ["foo:bar", "foo"]
 
 
