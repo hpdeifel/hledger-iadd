@@ -1,3 +1,7 @@
+# 1.3.4
+
+  - Fix test suite build with hledger-lib 1.9
+
 # 1.3.3
 
   - Support new dependencies
