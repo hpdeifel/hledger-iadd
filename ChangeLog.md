@@ -1,6 +1,6 @@
 # 1.3.5
 
-  - Fix suite build with hledger-lib 1.9.1
+  - Fix build with hledger-lib 1.9.1
 
 # 1.3.4
 
