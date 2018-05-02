@@ -11,10 +11,10 @@ import Brick
   ( Widget, App(..), AttrMap, BrickEvent(..), Next, EventM
   , (<=>), (<+>), txt, continue, halt, attrMap, on, fg
   , defaultMain, showFirstCursor, padBottom, Padding(Max,Pad)
-  , vLimit, padTopBottom, vSize, Size(Fixed), padAll, padLeft
+  , padAll, padLeft
   )
 import Brick.Widgets.BetterDialog (dialog)
-import Brick.Widgets.Border (hBorder, vBorder)
+import Brick.Widgets.Border (hBorder)
 import Brick.Widgets.Edit.EmacsBindings
   ( Editor, renderEditor, handleEditorEvent, getEditContents, editContentsL
   , editorText
