@@ -28,7 +28,7 @@ import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Builder (Builder, toLazyText)
 import qualified Data.Text.Lazy.Builder as Build
 import qualified Data.Text.Lazy.Builder.Int as Build
-import           Data.Time hiding (parseTime)
+import           Data.Time.Ext hiding (parseTime)
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
 import           Text.Megaparsec.Compat
@@ -54,7 +54,7 @@ parseHLDate current text = case parse HL.smartdate "date" text of
   Left err -> Left $ T.pack $ parseErrorPretty err
 
 parseHLDateWithToday :: Text -> IO (Either Text Day)
-parseHLDateWithToday text = flip parseHLDate text . utctDay <$> getCurrentTime
+parseHLDateWithToday text = flip parseHLDate text <$> getLocalDay
 
 -- | Corresponds to %d[.[%m[.[%y]]]]
 german :: DateFormat
@@ -94,7 +94,7 @@ escape =  char '\\' *> pure (DateString "\\")
 -- | Parse text with given format and fill in missing fields with todays date.
 parseDateWithToday :: DateFormat -> Text -> IO (Either Text Day)
 parseDateWithToday spec text = do
-  today <- utctDay <$> getCurrentTime
+  today <- getLocalDay
   return (parseDate today spec text)
 
 parseDate :: Day -> DateFormat -> Text -> Either Text Day

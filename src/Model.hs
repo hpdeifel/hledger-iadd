@@ -27,7 +27,7 @@ import           Data.Monoid
 import           Data.Ord (Down(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time hiding (parseTime)
+import           Data.Time.Ext hiding (parseTime)
 import qualified Hledger as HL
 
 import           AmountParser
@@ -112,7 +112,7 @@ context _ _ _ _  (FinalQuestion _ _) = return []
 -- For example, it suggests today for the date prompt
 suggest :: HL.Journal -> DateFormat -> Step -> IO (Maybe Text)
 suggest _ dateFormat (DateQuestion _) =
-  Just . printDate dateFormat . utctDay <$> getCurrentTime
+  Just . printDate dateFormat <$> getLocalDay
 suggest _ _ (DescriptionQuestion _ _) = return Nothing
 suggest journal _ (AccountQuestion trans _) = return $
   if numPostings trans /= 0 && transactionBalanced trans
