@@ -1,3 +1,7 @@
+# 1.3.6
+
+  - bugfix: Use local time instead of UTC everywhere
+
 # 1.3.5
 
   - Fix build with hledger-lib 1.9.1
