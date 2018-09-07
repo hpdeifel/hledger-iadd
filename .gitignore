@@ -3,3 +3,4 @@
 /cabal.config
 /dist
 /dist-newstyle
+/.hspec-failures
