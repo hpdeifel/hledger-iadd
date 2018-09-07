@@ -2,13 +2,5 @@ flags: {}
 extra-package-dbs: []
 packages:
 - .
-extra-deps:
-- brick-0.35
-- config-ini-0.2.2.0
-- data-clist-0.1.2.1
-- hashtables-1.2.3.0
-- hledger-lib-1.5.1
-- text-zipper-0.10.1
-- uglymemo-0.1.0.1
-- word-wrap-0.4.1
-resolver: nightly-2018-03-22
+extra-deps: []
+resolver: lts-12.9
