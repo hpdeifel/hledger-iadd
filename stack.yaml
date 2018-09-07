@@ -2,8 +2,5 @@ flags: {}
 extra-package-dbs: []
 packages:
 - .
-extra-deps:
-- hledger-lib-1.10
-- base-compat-batteries-0.10.1
-- base-compat-0.10.1
-resolver: lts-11.22
+extra-deps: []
+resolver: lts-12.9
