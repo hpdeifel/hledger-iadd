@@ -1,3 +1,7 @@
+# NEXT RELEASE
+
+  - Switch stack builds to ghc 8.4 by default
+
 # 1.3.6
 
   - bugfix: Use local time instead of UTC everywhere
