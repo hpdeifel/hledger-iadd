@@ -5,3 +5,4 @@
 /dist-newstyle
 /.hspec-failures
 /.ghc.environment*
+.dir-locals.el
