@@ -4,3 +4,4 @@
 /dist
 /dist-newstyle
 /.hspec-failures
+/.ghc.environment*
