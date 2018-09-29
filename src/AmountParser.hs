@@ -6,7 +6,8 @@ import           Data.Text (Text)
 import qualified Hledger as HL
 import           Data.Functor.Identity
 import           Control.Monad.Trans.State.Strict
-import           Text.Megaparsec.Compat hiding (Parser)
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 #if MIN_VERSION_hledger_lib(1,3,1)
 type Parser a = HL.JournalParser Identity a

@@ -54,7 +54,8 @@ import System.Environment.XDG.BaseDir (getUserConfigFile)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStr, hPutStrLn, stderr)
 -- explicit package import since hledger-lib defines the same module
-import qualified "hledger-iadd" Text.Megaparsec.Compat as P
+import qualified Text.Megaparsec as P
+import qualified Text.Megaparsec.Char as P
 
 import Brick.Widgets.CommentDialog
 import Brick.Widgets.HelpMessage

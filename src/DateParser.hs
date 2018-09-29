@@ -22,6 +22,8 @@ import           Control.Applicative hiding (many, some)
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Semigroup as Sem
+import           Data.Void
+
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -31,7 +33,8 @@ import qualified Data.Text.Lazy.Builder.Int as Build
 import           Data.Time.Ext hiding (parseTime)
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
-import           Text.Megaparsec.Compat
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 import           Text.Printf (printf, PrintfArg)
 
 newtype DateFormat = DateFormat [DateSpec]
@@ -69,6 +72,9 @@ parseDateFormat :: Text -> Either Text DateFormat
 parseDateFormat text = case parse dateSpec "date-format" text of
   Left err  -> Left $ T.pack $ parseErrorPretty err
   Right res -> Right res
+
+
+type Parser = Parsec Void Text
 
 dateSpec :: Parser DateFormat
 dateSpec = DateFormat <$> (many oneTok <* eof)
