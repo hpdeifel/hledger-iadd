@@ -24,7 +24,7 @@ parseAmount :: HL.Journal -> Text -> Either String HL.MixedAmount
 parseAmount journal t =
   case
       runIdentity
-        $ runParserT (evalStateT (expr <* optional space <* eof) journal) "" t
+        $ runParserT (evalStateT (expr <* space <* eof) journal) "" t
     of
       Left  err -> Left (parseErrorPretty err)
       Right res -> Right res
@@ -70,7 +70,7 @@ exprParser = makeExprParser term ops
       , [InfixL (Add <$ symbol "+"), InfixL (Sub <$ symbol "-")]
       ]
 
-    term = parens exprParser <|> (Amount <$> HL.amountp)
+    term = parens exprParser <|> (Amount <$> (HL.amountp <* space))
 
 
 parens :: Parser a -> Parser a
