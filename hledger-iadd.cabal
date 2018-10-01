@@ -127,4 +127,5 @@ test-suite spec
                     , free >= 4.12.4
                     , megaparsec >= 6.4.1 && <6.6
                     , text-zipper >= 0.10
+  build-tool-depends: hspec-discover:hspec-discover ==2.*
   ghc-options:        -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
