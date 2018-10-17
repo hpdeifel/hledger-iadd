@@ -19,8 +19,10 @@ module DateParser
        ) where
 
 import           Control.Applicative hiding (many, some)
+import           Data.List
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Ord
 import qualified Data.Semigroup as Sem
 import           Data.Void
 
@@ -184,18 +186,25 @@ relativeDays = map try
   [ addDays 1    <$ string "tomorrow"
   , id           <$ string "today"
   , addDays (-1) <$ string "yesterday"
+  , addDays (-1) <$ string "yest"
   ]
 
 weekDays :: [Parser (Day -> Day)]
-weekDays = zipWith (\i name -> weekDay i <$ try (string name)) [1..]
-  [ "monday"
-  , "tuesday"
-  , "wednesday"
-  , "thursday"
-  , "friday"
-  , "saturday"
-  , "sunday"
-  ]
+weekDays = map (\(i, name) -> weekDay i <$ try (string name)) sortedDays
+  where -- sort the days so that the parser finds the longest match
+        sortedDays :: [(Int, Text)]
+        sortedDays = sortOn (Down . T.length . snd) flattenedDays
+        flattenedDays :: [(Int, Text)]
+        flattenedDays = concatMap (\(i, xs) -> fmap (i,) xs) days
+        days :: [(Int, [Text])]
+        days = [ (1, ["monday", "mon"])
+               , (2, ["tuesday", "tues", "tue"])
+               , (3, ["wednesday", "wed"])
+               , (4, ["thursday", "thur"])
+               , (5, ["friday", "fri"])
+               , (6, ["saturday", "sat"])
+               , (7, ["sunday", "sun"])
+               ]
 
 -- | Computes a relative date by the given weekday
 --

@@ -1,6 +1,7 @@
 # NEXT RELEASE
 
   - Switch stack builds to ghc 8.4 by default
+  - Add abbreviated days of the week to date completion (e.g. `mon`, `tue`, etc)
 
 # 1.3.6
 
