@@ -104,6 +104,48 @@ dateCompletionTests = describe "date completion" $ do
       parseDate (fromGregorian 2016 9 15) yearMonth "2016.1"
     ) `shouldBe` Right (fromGregorian 2016 1 31)
 
+  it "literally yesterday" $ do
+    parseGerman 2018 10 18 "yesterday" `shouldBe` Right (fromGregorian 2018 10 17)
+    parseGerman 2018 10 18 "yest" `shouldBe` Right (fromGregorian 2018 10 17)
+
+  it "literally today" $ do
+    parseGerman 2018 10 18 "today" `shouldBe` Right (fromGregorian 2018 10 18)
+
+  it "literally tomorrow" $ do
+    parseGerman 2018 10 18 "tomorrow" `shouldBe` Right (fromGregorian 2018 10 19)
+
+  it "literally monday" $ do
+    parseGerman 2018 10 18 "monday" `shouldBe` Right (fromGregorian 2018 10 15)
+    parseGerman 2018 10 18 "mon" `shouldBe` Right (fromGregorian 2018 10 15)
+
+  it "literally tuesday" $ do
+    parseGerman 2018 10 18 "tuesday" `shouldBe` Right (fromGregorian 2018 10 16)
+    parseGerman 2018 10 18 "tues" `shouldBe` Right (fromGregorian 2018 10 16)
+    parseGerman 2018 10 18 "tue" `shouldBe` Right (fromGregorian 2018 10 16)
+
+  it "literally wednesday" $ do
+    parseGerman 2018 10 18 "wednesday" `shouldBe` Right (fromGregorian 2018 10 17)
+    parseGerman 2018 10 18 "wed" `shouldBe` Right (fromGregorian 2018 10 17)
+
+  it "literally thursday" $ do
+    parseGerman 2018 10 18 "thursday" `shouldBe` Right (fromGregorian 2018 10 18)
+    parseGerman 2018 10 18 "thur" `shouldBe` Right (fromGregorian 2018 10 18)
+
+  it "literally friday" $ do
+    parseGerman 2018 10 18 "friday" `shouldBe` Right (fromGregorian 2018 10 12)
+    parseGerman 2018 10 18 "fri" `shouldBe` Right (fromGregorian 2018 10 12)
+
+  it "literally saturday" $ do
+    parseGerman 2018 10 18 "saturday" `shouldBe` Right (fromGregorian 2018 10 13)
+    parseGerman 2018 10 18 "sat" `shouldBe` Right (fromGregorian 2018 10 13)
+
+  it "literally sunday" $ do
+    parseGerman 2018 10 18 "sunday" `shouldBe` Right (fromGregorian 2018 10 14)
+    parseGerman 2018 10 18 "sun" `shouldBe` Right (fromGregorian 2018 10 14)
+
+  it "literally satan" $ do
+    parseGerman 2018 10 18 "satan" `shouldSatisfy` isLeft
+
   where
     parseGerman :: Integer -> Int -> Int -> String -> Either Text Day
     parseGerman y m d str = parseDate (fromGregorian y m d)  german (T.pack str)
