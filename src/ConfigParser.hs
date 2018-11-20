@@ -272,4 +272,15 @@ parseNumber = read <$> ((<>) <$> (maybeToList <$> optional (char '-')) <*> some 
 -- | Like 'parse', but start at a specific source position instead of 0.
 parseWithStart :: (Stream s, Ord e)
                => Parsec e s a -> SourcePos -> s -> Either (ParseErrorBundle s e) a
-parseWithStart p pos = parse p (sourceName pos) -- FIXME Currently ignores the position
+parseWithStart p pos s = snd (runParser' p state)
+  where state = State
+          { stateInput = s
+          , stateOffset = 0
+          , statePosState =PosState
+            { pstateInput = s
+            , pstateOffset = 0
+            , pstateSourcePos = pos
+            , pstateTabWidth = mkPos 1
+            , pstateLinePrefix = ""
+            }
+          }
