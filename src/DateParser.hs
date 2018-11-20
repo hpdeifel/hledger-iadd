@@ -56,7 +56,7 @@ data DateSpec = DateYear
 parseHLDate :: Day -> Text -> Either Text Day
 parseHLDate current text = case parse HL.smartdate "date" text of
   Right res -> Right $ HL.fixSmartDate current res
-  Left err -> Left $ T.pack $ parseErrorPretty err
+  Left err -> Left $ T.pack $ errorBundlePretty err
 
 parseHLDateWithToday :: Text -> IO (Either Text Day)
 parseHLDateWithToday text = flip parseHLDate text <$> getLocalDay
@@ -72,7 +72,7 @@ german = DateFormat
 
 parseDateFormat :: Text -> Either Text DateFormat
 parseDateFormat text = case parse dateSpec "date-format" text of
-  Left err  -> Left $ T.pack $ parseErrorPretty err
+  Left err  -> Left $ T.pack $ errorBundlePretty err
   Right res -> Right res
 
 
@@ -115,7 +115,7 @@ parseDate current (DateFormat spec) text =
       num = completeIDate . fmap getFirst <$> parseDate' spec <* eof
 
   in case parse ((try en <|> num) <* eof) "date" text of
-    Left err -> Left $ T.pack $ parseErrorPretty err
+    Left err -> Left $ T.pack $ errorBundlePretty err
     Right Nothing -> Left "Invalid Date"
     Right (Just d) -> Right d
 

@@ -60,7 +60,7 @@ library
                      , Data.Time.Ext
   default-language:    Haskell2010
   build-depends:       base >= 4.9 && < 5
-                     , hledger-lib >= 1.5 && < 1.12
+                     , hledger-lib >= 1.11.99 && < 1.12
                      , brick >= 0.27
                      , vty >= 5.4
                      , text
@@ -70,9 +70,7 @@ library
                      , transformers >= 0.3
                      , time >= 1.5
                      , vector
-                     -- megaparsec <= 6.4.0 has a bug that affects our
-                     -- amount-expression parser
-                     , megaparsec >= 6.0 && <6.6
+                     , megaparsec >= 7.0 && <7.1
                      , containers
                      , optparse-applicative
                      , directory
@@ -89,7 +87,7 @@ executable hledger-iadd
   default-language:    Haskell2010
   build-depends:       base >= 4.9 && < 5
                      , hledger-iadd
-                     , hledger-lib >= 1.5 && < 1.12
+                     , hledger-lib >= 1.11.99 && < 1.12
                      , brick >= 0.27
                      , vty >= 5.4
                      , text
@@ -103,7 +101,7 @@ executable hledger-iadd
                      , xdg-basedir
                      , unordered-containers
                      , free >= 4.12.4
-                     , megaparsec >= 6.0 && <6.6
+                     , megaparsec >= 7.0 && <7.1
   ghc-options:         -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing
 
 test-suite spec
@@ -117,7 +115,7 @@ test-suite spec
   default-language:   Haskell2010
   build-depends:      base >= 4.9 && < 5
                     , hledger-iadd
-                    , hledger-lib >= 1.5 && < 1.12
+                    , hledger-lib >= 1.11.99 && < 1.12
                     , text
                     , transformers >= 0.3
                     , time >= 1.5
@@ -125,7 +123,7 @@ test-suite spec
                     , hspec
                     , QuickCheck
                     , free >= 4.12.4
-                    , megaparsec >= 6.0 && <6.6
+                    , megaparsec >= 7.0 && <7.1
                     , text-zipper >= 0.10
   build-tool-depends: hspec-discover:hspec-discover ==2.*
   ghc-options:        -threaded -Wall -fdefer-typed-holes -fno-warn-name-shadowing

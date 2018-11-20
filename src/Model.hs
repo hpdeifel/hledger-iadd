@@ -29,6 +29,8 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Ext hiding (parseTime)
 import qualified Hledger as HL
+import           Data.Foldable
+import           Control.Applicative
 
 import           AmountParser
 import           DateParser
@@ -282,7 +284,7 @@ transactionBalanced trans =
 negativeAmountSum :: HL.Transaction -> HL.MixedAmount
 negativeAmountSum trans =
   let (rsum, _, _) = HL.transactionPostingBalances trans
-  in HL.divideMixedAmount rsum (-1)
+  in HL.divideMixedAmount (-1) rsum
 
 -- | Compare two transaction descriptions based on their number of occurences in
 -- the given journal.
@@ -333,7 +335,7 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
     postingAttributes =
       [ cmp HL.pdate, cmp HL.pdate2, cmp HL.pstatus, cmp HL.paccount
       , cmpMixedAmount `on` HL.pamount, cmpPType `on` HL.ptype
-      , cmp HL.pbalanceassertion
+      , (fmap fold . liftA2 cmpBalanceAssertion) `on` HL.pbalanceassertion
       ]
 
     -- | Ammount attributes that are compared to determine duplicates
@@ -344,7 +346,7 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
     cmpTransaction :: HL.Transaction -> HL.Transaction -> Ordering
     cmpTransaction = lexical transactionAttributes
 
-    
+
     -- | Compare two posting lists of postings by sorting them deterministically
     -- and then compare correspondings list elements
     cmpPostings :: [HL.Posting] -> [HL.Posting] -> Ordering
@@ -375,6 +377,9 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
         mconcat $
           compare (length as1) (length as2) : zipWith cmpAmount sortedAs1 sortedAs2
 
+    cmpBalanceAssertion :: HL.BalanceAssertion -> HL.BalanceAssertion -> Ordering
+    cmpBalanceAssertion = lexical [cmp HL.baamount, cmp HL.baexact]
+
     sortPostings :: [HL.Posting] -> [HL.Posting]
     sortPostings = sortBy (lexical postingAttributes)
 
@@ -384,7 +389,7 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
 
     -- | Apply two things with multiple predicats and combine the results lexicographically
     lexical :: [a -> b -> Ordering] -> a -> b -> Ordering
-    lexical fs x y = mconcat (map (\f -> f x y) fs)
+    lexical = fold -- hehe
 
 fromEither :: Either a a -> a
 fromEither = either id id

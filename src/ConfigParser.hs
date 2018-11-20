@@ -49,11 +49,10 @@ import           Control.Applicative.Free
 import           Control.Monad
 import           Data.Functor.Identity
 import           Data.Semigroup ((<>))
-import           Data.Void
 import qualified Data.List.NonEmpty as NE
 
 import qualified Data.Set as S
-import           Data.Set (Set)
+-- import           Data.Set (Set)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -72,9 +71,9 @@ instance ShowErrorComponent ConfParseError where
   showErrorComponent (TypeError typ name) =
     "in " ++ T.unpack typ ++ " argument for option " ++ T.unpack name
 
-type OParser = Parsec (CustomError ConfParseError) Text
+type OParser = Parsec ConfParseError Text
 
-type CustomParseError = ParseError Char (CustomError ConfParseError)
+type CustomParseError = ParseErrorBundle Text ConfParseError
 
 -- | Parse a config file from a 'Text'.
 parseConfig :: FilePath -- ^ File path to use in error messages
@@ -145,11 +144,11 @@ instance OptionArgument Integer where
   printArgument = T.pack . show
 
 instance OptionArgument String where
-  mkParser = ("string",  many anyChar)
+  mkParser = ("string",  many anySingle)
   printArgument = quote . T.pack
 
 instance OptionArgument Text where
-  mkParser = ("string",  T.pack <$> many anyChar)
+  mkParser = ("string",  T.pack <$> many anySingle)
   printArgument = quote
 
 quote :: Text -> Text
@@ -194,6 +193,23 @@ parseOption (Ap opt rest) ass
          Right res -> Right $ fmap ($ res) rest
   | otherwise = fmap (Ap opt) $ parseOption rest ass
 
+mkCustomError :: SourcePos -> e -> ParseErrorBundle Text e
+mkCustomError pos e = ParseErrorBundle
+  { bundleErrors = NE.fromList [FancyError 0 (S.singleton (ErrorCustom e))]
+  , bundlePosState = PosState
+    { pstateInput = ""
+    , pstateOffset = 0
+    , pstateSourcePos = pos
+    , pstateTabWidth = mkPos 1
+    , pstateLinePrefix = ""
+    }
+  }
+addCustomError :: ParseErrorBundle Text e -> e -> ParseErrorBundle Text e
+addCustomError e customE =
+  e { bundleErrors = NE.cons
+                      (FancyError 0 (S.singleton (ErrorCustom customE)))
+                      (bundleErrors e)}
+
 -- Low level assignment parser
 
 data Assignment = Assignment
@@ -213,7 +229,7 @@ assignmentList = whitespace *> many (assignment <* whitespace)
 assignment :: OParser Assignment
 assignment = do
   Assignment
-    <$> getPosition <*> key <* whitespaceNoComment
+    <$> getSourcePos <*> key <* whitespaceNoComment
     <*  char '=' <* whitespaceNoComment
     <*> value
 
@@ -221,7 +237,7 @@ key :: OParser Text
 key = T.pack <$> some (alphaNumChar <|> char '_' <|> char '-')
 
 value :: OParser AssignmentValue
-value = AssignmentValue <$> getPosition <*> content <* whitespaceNoEOL <* (void eol <|> eof)
+value = AssignmentValue <$> getSourcePos <*> content <* whitespaceNoEOL <* (void eol <|> eof)
 
 content :: OParser Text
 content =  escapedString
@@ -234,7 +250,7 @@ bareString = (T.strip . T.pack <$> some (noneOf ("#\n" :: String)))
 escapedString :: OParser Text
 escapedString = (T.pack <$> (char '"' *> many escapedChar <* char '"'))
                 <?> "quoted string"
-  where escapedChar =  char '\\' *> anyChar
+  where escapedChar =  char '\\' *> anySingle
                    <|> noneOf ("\"" :: String)
 
 whitespace :: OParser ()
@@ -255,42 +271,5 @@ parseNumber = read <$> ((<>) <$> (maybeToList <$> optional (char '-')) <*> some 
 
 -- | Like 'parse', but start at a specific source position instead of 0.
 parseWithStart :: (Stream s, Ord e)
-               => Parsec e s a -> SourcePos -> s -> Either (ParseError (Token s) e) a
-parseWithStart p pos = parse p' (sourceName pos)
-  where p' = do setPosition pos; p
-
-
--- | Custom error type that mimics FancyError of megaparsec-6 but retains
--- information about unexpected and expected tokens.
-data CustomError e = CustomError
-  (Maybe (ErrorItem Char))      -- unexpected
-  (Set (ErrorItem Char))        -- expected
-  e                             -- custom error data
-  deriving (Eq, Show, Ord)
-
-instance ShowErrorComponent e => ShowErrorComponent (CustomError e) where
-  showErrorComponent (CustomError us es e) =
-    parseErrorTextPretty (TrivialError undefined us es :: ParseError Char Void)
-    ++ showErrorComponent e
-
-
--- | Wrap a custom error type into a 'ParseError'.
-mkCustomError :: SourcePos -> e -> ParseError t (CustomError e)
-mkCustomError pos custom = FancyError (neSingleton pos)
-  (S.singleton (ErrorCustom (CustomError Nothing S.empty custom)))
-
-
--- | Add a custom error to an already existing error.
---
--- This retains the original information such as expected and unexpected tokens
--- as well as the source position.
-addCustomError :: Ord e => ParseError Char (CustomError e) -> e -> ParseError Char (CustomError e)
-addCustomError e custom = case e of
-  TrivialError source us es ->
-    FancyError source (S.singleton (ErrorCustom (CustomError us es custom)))
-  FancyError source es ->
-    FancyError source (S.insert (ErrorCustom (CustomError Nothing S.empty custom)) es)
-
-
-neSingleton :: a -> NE.NonEmpty a
-neSingleton x = x NE.:| []
+               => Parsec e s a -> SourcePos -> s -> Either (ParseErrorBundle s e) a
+parseWithStart p pos = parse p (sourceName pos) -- FIXME Currently ignores the position

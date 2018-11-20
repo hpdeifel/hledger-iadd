@@ -449,7 +449,7 @@ parseConfigFile = do
     Left (_ :: SomeException) -> return (parserDefault $ confParser def)
     Right res -> case parseConfig path res (confParser def) of
       Left err -> do
-        putStr (P.parseErrorPretty err)
+        putStr (P.errorBundlePretty err)
         exitFailure
       Right res' -> return res'
 
