@@ -1,4 +1,4 @@
-# NEXT RELEASE
+# 1.3.7
 
   - feature: Add abbreviated days of the week to date completion (e.g. `mon`,
     `tue`, etc)
