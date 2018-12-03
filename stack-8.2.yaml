@@ -3,7 +3,13 @@ extra-package-dbs: []
 packages:
 - .
 extra-deps:
-- hledger-lib-1.10
-- base-compat-batteries-0.10.1
-- base-compat-0.10.1
+  - hledger-lib-1.12
+  - megaparsec-7.0.4
+  - cassava-megaparsec-2.0.0
+  - config-ini-0.2.4.0
+  - base-compat-batteries-0.10.5@sha256:480e82200ededcb1cb71ce5dd3b215b8eeb5728ae62f5ab026e2db39f76cf5f3
+  - easytest-0.2.1@sha256:b819be42963118f61d955b5554fa83ce53442f942e322a4b8a75412d71ff9ed1
+  - parser-combinators-1.0.0@sha256:7374d14cd3b38af0c7f7333049d6af1ccbbe6009deaa66e18701c2194e48f253
+  - base-compat-0.10.5@sha256:d49e174ed0daecd059c52d13d4f4de87b5609c81212a22adbb92431f9cd58fff
+  - contravariant-1.5@sha256:83f4d20073414561f2352aeb8f48207def31cc933eb058c141968fbbefaeb0d5
 resolver: lts-11.22

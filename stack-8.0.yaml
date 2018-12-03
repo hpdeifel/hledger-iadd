@@ -1,9 +1,0 @@
-flags: {}
-extra-package-dbs: []
-packages:
-- .
-extra-deps:
-  - hledger-lib-1.5
-  - megaparsec-6.5.0
-  - parser-combinators-1.0.0
-resolver: lts-9.21
