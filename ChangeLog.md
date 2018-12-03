@@ -1,7 +1,10 @@
 # NEXT RELEASE
 
-  - Switch stack builds to ghc 8.4 by default
-  - Add abbreviated days of the week to date completion (e.g. `mon`, `tue`, etc)
+  - feature: Add abbreviated days of the week to date completion (e.g. `mon`,
+    `tue`, etc)
+  - dependencies: Port to hledger-lib-1.12 and megaparsec-7
+  - dependencies: Support GHC-8.6
+  - dependencies: Switch stack builds to ghc 8.4 by default
 
 # 1.3.6
 
