@@ -1,7 +1,1 @@
 packages: .
-
-source-repository-package
-  type: git
-  location: https://github.com/simonmichael/hledger.git
-  tag: a711ae60fba84eac8a5aa2d477685f7f4a35c9a0
-  subdir: hledger-lib

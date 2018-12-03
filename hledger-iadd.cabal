@@ -61,7 +61,7 @@ library
                      , Data.Time.Ext
   default-language:    Haskell2010
   build-depends:       base >= 4.9 && < 5
-                     , hledger-lib >= 1.11.99 && < 1.12
+                     , hledger-lib >= 1.12 && < 1.13
                      , brick >= 0.27
                      , vty >= 5.4
                      , text
@@ -88,7 +88,7 @@ executable hledger-iadd
   default-language:    Haskell2010
   build-depends:       base >= 4.9 && < 5
                      , hledger-iadd
-                     , hledger-lib >= 1.11.99 && < 1.12
+                     , hledger-lib >= 1.12 && < 1.13
                      , brick >= 0.27
                      , vty >= 5.4
                      , text
@@ -116,7 +116,7 @@ test-suite spec
   default-language:   Haskell2010
   build-depends:      base >= 4.9 && < 5
                     , hledger-iadd
-                    , hledger-lib >= 1.11.99 && < 1.12
+                    , hledger-lib >= 1.12 && < 1.13
                     , text
                     , transformers >= 0.3
                     , time >= 1.5
