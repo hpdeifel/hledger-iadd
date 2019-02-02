@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
 
 module ModelSpec (spec) where
 
@@ -91,13 +90,7 @@ accByFreqSpec = do
     accountsByFrequency j `shouldBe` ["x:y", "x:z", "x"]
 
   it "includes accounts from the 'account directive'" $ do
-#if MIN_VERSION_hledger_lib(1,11,0)
-    let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jdeclaredaccounts = ["foo:bar"]}
-#elif MIN_VERSION_hledger_lib(1,9,0)
-    let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jaccounts = [("foo:bar", Nothing)]}
-#else
-    let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jaccounts = ["foo:bar"]}
-#endif
+    let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jdeclaredaccounts = [("foo:bar", HL.nullaccountdeclarationinfo)]}
     accountsByFrequency j `shouldContain` ["foo:bar", "foo"]
 
 
@@ -169,7 +162,7 @@ isDuplicateTransactionSpec = do
 
     isDuplicateTransaction (HL.addTransaction t2 HL.nulljournal) t1 `shouldBe` True
     isDuplicateTransaction (HL.addTransaction t3 HL.nulljournal) t1 `shouldBe` True
-      
+
   it "considers date and description" $ do
     let
       t1 = ((2017,9,23), "Test", [("Test", 1), ("Toast", -1)])
@@ -178,7 +171,7 @@ isDuplicateTransactionSpec = do
 
     isDuplicateTransaction (mkJournal [t1]) (mkTransaction t2) `shouldBe` False
     isDuplicateTransaction (mkJournal [t1]) (mkTransaction t3) `shouldBe` False
-      
+
 
   it "considers date, amount and account of postings" $ do
     let
@@ -233,4 +226,3 @@ mkPosting (account, amount) = HL.nullposting
   { HL.paccount = account
   , HL.pamount = HL.mixed [HL.eur (fromIntegral amount)]
   }
-
