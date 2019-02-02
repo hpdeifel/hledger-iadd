@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 module AmountParser (parseAmount) where
 
 import           Data.Text (Text)
@@ -9,11 +7,7 @@ import           Control.Monad.Trans.State.Strict
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
-#if MIN_VERSION_hledger_lib(1,3,1)
 type Parser a = HL.JournalParser Identity a
-#else
-type Parser a = HL.JournalStateParser Identity a
-#endif
 
 parseAmount :: HL.Journal -> Text -> Either String HL.MixedAmount
 parseAmount journal t = case runIdentity $ runParserT (evalStateT (mixed <* optional space <* eof) journal) "" t of

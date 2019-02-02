@@ -3,7 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
 {-# LANGUAGE PackageImports #-}
-{-# LANGUAGE CPP #-}
 
 module Main where
 
@@ -527,11 +526,7 @@ main = do
   let path = runIdentity $ optLedgerFile opts
   journalContents <- T.readFile path
 
-#if MIN_VERSION_hledger_lib(1,9,1)
   runExceptT (HL.parseAndFinaliseJournal HL.journalp HL.definputopts path journalContents) >>= \case
-#else
-  runExceptT (HL.parseAndFinaliseJournal HL.journalp True path journalContents) >>= \case
-#endif
     Left err -> hPutStrLn stderr err >> exitFailure
     Right journal -> do
       let edit = editorText EditorName (txt . T.concat) (Just 1) ""
