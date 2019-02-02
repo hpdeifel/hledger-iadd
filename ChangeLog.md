@@ -1,3 +1,7 @@
+# 1.3.8
+
+  - dependencies: Port to hledger-lib-1.13
+
 # 1.3.7
 
   - feature: Add abbreviated days of the week to date completion (e.g. `mon`,
