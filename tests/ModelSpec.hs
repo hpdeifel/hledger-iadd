@@ -39,7 +39,7 @@ suggestSpec = do
 
       forM_ (zip (inits postings) postings) $ \(posts, next) -> do
         let t = mkTransaction ((2016, 1, 1), "Foo", map (\(x,y) -> (x, y+1)) posts)
-        suggest j german (AccountQuestion t "") `shouldReturn` (Just (fst next))
+        suggest j german (AccountQuestion t "") `shouldReturn` Just (fst next)
 
 
   context "at the amount prompt" $ do
@@ -51,14 +51,14 @@ suggestSpec = do
       forM_ (zip (inits postings) postings) $ \(posts, next) -> do
         let t = mkTransaction ((2016, 1, 1), "Foo", posts)
         suggest j german (AmountQuestion (fst next) t "")
-          `shouldReturn` (Just ("€" <> (T.pack $ show $ snd next) <> ".00"))
+          `shouldReturn` Just ("€" <> T.pack (show $ snd next) <> ".00")
 
     it "suggests the balancing amount if accounts don't match with similar transaction" $ do
       let postings = [("x", 1), ("y", 2), ("z", 3)]
           j = mkJournal [ ((2017, 1, 1), "Foo", postings) ]
           t = mkTransaction ((2016, 1, 1), "Foo", [("foo", 3)])
 
-      suggest j german (AmountQuestion "y" t "") `shouldReturn` (Just "€-3.00")
+      suggest j german (AmountQuestion "y" t "") `shouldReturn` Just "€-3.00"
 
     it "initially doesn't suggest an amount if there is no similar transaction" $ do
       let j = mkJournal [ ((2017, 1, 1), "Foo", [("x", 2), ("y", 3)]) ]
@@ -70,7 +70,7 @@ suggestSpec = do
       let j = mkJournal [ ((2017, 1, 1), "Foo", [("x", 2), ("y", 3)]) ]
           t = mkTransaction ((2016, 1, 1), "Bar", [("foo", 3)])
 
-      suggest j german (AmountQuestion "y" t "") `shouldReturn` (Just "€-3.00")
+      suggest j german (AmountQuestion "y" t "") `shouldReturn` Just "€-3.00"
 
 
 accByFreqSpec :: Spec
@@ -211,8 +211,8 @@ type Date = (Integer,Int,Int) -- y, d, m
 -- Transactions consists of the date, a description and a list of postings in
 -- for form of (account, amount)
 mkJournal :: [(Date, Text, [(Text, Int)])] -> HL.Journal
-mkJournal transactions =
-  foldl (\j t -> HL.addTransaction (mkTransaction t) j) HL.nulljournal transactions
+mkJournal =
+  foldl (\j t -> HL.addTransaction (mkTransaction t) j) HL.nulljournal
 
 mkTransaction :: (Date, Text, [(Text, Int)]) -> HL.Transaction
 mkTransaction ((year,month,day), desc, postings) = HL.nulltransaction
