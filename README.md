@@ -23,6 +23,12 @@ Also see the user guide under [Usage](#usage).
 
 ## Installation
 ### Latest release
+#### Archlinux
+
+For Archlinux users, an [AUR package](https://aur.archlinux.org/packages/hledger-iadd-bin) with a binary built by me (@hpdeifel)
+is available. If you want to compile `hledger-iadd` yourself, use one of the
+following installation methods.
+
 #### stack
 
 The easiest method would be [stack]: Install the [stack] program and
