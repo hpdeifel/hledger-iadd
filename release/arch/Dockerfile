@@ -1,0 +1,13 @@
+FROM archlinux/base
+
+RUN pacman -Suy --noconfirm
+RUN pacman -S --noconfirm curl base-devel
+RUN curl https://raw.githubusercontent.com/haskell/ghcup/master/bootstrap-haskell -sSf | sh
+ENV PATH="/root/.cabal/bin/:/root/.ghcup/bin:${PATH}"
+RUN cabal new-install cabal-plan
+RUN mkdir /build/
+
+WORKDIR /build/
+CMD cp -r /home/hledger-iadd/* /build/ && cabal new-build && \
+	cp `cabal-plan list-bin hledger-iadd` /home/hledger-iadd/ && \
+	strip /home/hledger-iadd/hledger-iadd
