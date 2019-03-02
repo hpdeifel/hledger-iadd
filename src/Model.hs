@@ -378,7 +378,7 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
           compare (length as1) (length as2) : zipWith cmpAmount sortedAs1 sortedAs2
 
     cmpBalanceAssertion :: HL.BalanceAssertion -> HL.BalanceAssertion -> Ordering
-    cmpBalanceAssertion = lexical [cmp HL.baamount, cmp HL.baexact]
+    cmpBalanceAssertion = lexical [cmp HL.baamount, cmp HL.batotal]
 
     sortPostings :: [HL.Posting] -> [HL.Posting]
     sortPostings = sortBy (lexical postingAttributes)
