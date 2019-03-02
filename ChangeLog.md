@@ -1,3 +1,8 @@
+# 1.3.9   [2019-03-02]
+
+  - dependencies: Port to hledger-lib-1.14
+  - Add AUR packaging
+
 # 1.3.8
 
   - dependencies: Port to hledger-lib-1.13
