@@ -6,5 +6,5 @@ extra-deps:
  - config-ini-0.2.4.0
  - data-clist-0.1.2.2
  - word-wrap-0.4.1
- - hledger-lib-1.13
+ - hledger-lib-1.14
 resolver: lts-13.5
