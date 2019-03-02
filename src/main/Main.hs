@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
 
 module Main where
 
@@ -52,7 +51,6 @@ import System.Environment (lookupEnv)
 import System.Environment.XDG.BaseDir (getUserConfigFile)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hPutStr, hPutStrLn, stderr)
--- explicit package import since hledger-lib defines the same module
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 
@@ -132,7 +130,7 @@ draw as = case asDialog as of
   CommentDialog _ c -> [renderCommentWidget c, ui]
   NoDialog -> [ui]
 
-  where ui =  (txt "New Transaction:")
+  where ui =  txt "New Transaction:"
           <=> padAll 1 (borderLeft $ padLeft (Pad 1) $ viewState (asStep as))
           <=> hBorder
           <=> (viewQuestion (asStep as)
@@ -256,7 +254,7 @@ addTransactionEnd t j = j { HL.jtxns = HL.jtxns j ++ [t] }
 doNextStep :: Bool -> AppState -> IO AppState
 doNextStep useSelected as = do
   let inputText = editText as
-      name = fromMaybe (Left $ inputText) $
+      name = fromMaybe (Left inputText) $
                msum [ Right <$> if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
                     , Left <$> asMaybe (editText as)
                     , Left <$> asSuggestion as
@@ -313,7 +311,7 @@ doUndo as = case undo (asStep as) of
                     , asInputHistory = historyTail
                     }
     where (lastInput,historyTail) =
-            case (asInputHistory as) of
+            case asInputHistory as of
               x:t -> (x,t)
               [] -> ("",[])
 
