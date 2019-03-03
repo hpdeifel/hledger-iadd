@@ -1,0 +1,38 @@
+This Dockerfile is used to produce the [[https://aur.archlinux.org/packages/hledger-iadd-bin/][binary AUR package]] for Archlinux.
+
+* Building the Image
+
+Execute in this directory
+
+#+BEGIN_SRC sh
+docker build -t hledger-iadd .
+#+END_SRC
+
+* Building the binary from a release tarball
+
+From the toplevel directory of the repo:
+
+#+BEGIN_SRC sh
+./release/arch/build_release.sh VERSION
+#+END_SRC
+
+This creates tarball and signature in the current directory.
+
+* Uploading to Github release
+
+1. Go to the github release in question
+2. Click /Edit release/
+3. Drag and drop tarball and signature file into the area below the input box
+4. Click /Update release/
+
+* Updating the AUR package
+
+Last but not least, bump the version number in the AUR PKGBUILD, update
+the checksums (from local files, not github) and run:
+
+#+BEGIN_SRC sh
+makepkg
+makepkg --printsrcinfo > .SRCINFO
+git commit -m "Bump for new release"
+git push
+#+END_SRC
