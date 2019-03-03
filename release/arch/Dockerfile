@@ -8,6 +8,6 @@ RUN cabal new-install cabal-plan
 RUN mkdir /build/
 
 WORKDIR /build/
-CMD cp -r /home/hledger-iadd/* /build/ && cabal new-build && \
+CMD cp -r /home/hledger-iadd/* /build/ && cabal new-update && cabal new-build && \
 	cp `cabal-plan list-bin hledger-iadd` /home/hledger-iadd/ && \
 	strip /home/hledger-iadd/hledger-iadd
