@@ -165,7 +165,7 @@ The following keyboard shortcuts are available:
 
 ## Default Currency
 
-To make entry easier it is recommended that you set a [default commodity](http://hledger.org/manual.html#default-commodity)
+To make entry easier it is recommended that you set a [default commodity](https://hledger.org/journal.html#default-commodity)
 in your ledger file if you haven't already done so.
 That way when entering amounts, `hledger-iadd` will add the symbols for you.
 You can do this by adding a line like below to the top of your ledger file:
