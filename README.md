@@ -34,7 +34,7 @@ following installation methods.
 The easiest method would be [stack]: Install the [stack] program and
 type:
 
-    stack install --resolver=nightly hledger-iadd
+    stack install --resolver=lts hledger-iadd-1.3.9
 
 This downloads and builds `hledger-iadd` and all it's Haskell
 dependencies. After that, it copys the resulting binary to
