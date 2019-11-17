@@ -1,0 +1,10 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- .
+extra-deps:
+  - hledger-lib-1.14
+  - megaparsec-7.0.4
+  - cassava-megaparsec-2.0.0
+  - config-ini-0.2.4.0
+resolver: lts-12.26
