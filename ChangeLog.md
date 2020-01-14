@@ -1,3 +1,7 @@
+# 1.3.10   [2020-01-14]
+
+  - dependencies: Support megaparsec-8
+
 # 1.3.9   [2019-03-02]
 
   - dependencies: Port to hledger-lib-1.14
