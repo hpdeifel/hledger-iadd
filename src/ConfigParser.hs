@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs, DeriveFunctor, ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 
 -- | Applicative config parser.
 --
@@ -283,4 +284,7 @@ parseWithStart p pos s = snd (runParser' p state)
             , pstateTabWidth = mkPos 1
             , pstateLinePrefix = ""
             }
+#if MIN_VERSION_megaparsec(8,0,0)
+          , stateParseErrors = []
+#endif
           }
