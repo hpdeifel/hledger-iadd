@@ -1,3 +1,7 @@
+# NEXT RELEASE
+
+  - bugfix: Fix check for balanced transactions in the presence of commodities.
+
 # 1.3.10   [2020-01-14]
 
   - dependencies: Support megaparsec-8
