@@ -5,7 +5,7 @@ This Dockerfile is used to produce the [[https://aur.archlinux.org/packages/hled
 Execute in this directory
 
 #+BEGIN_SRC sh
-docker build -t hledger-iadd .
+podman build -t hledger-iadd .
 #+END_SRC
 
 * Building the binary from a release tarball

@@ -6,7 +6,7 @@
 #
 #   ./release/arch/build_release.sh VERSION
 #
-# This assumes that a docker image called hledger-iadd that is built from the
+# This assumes that a container image called hledger-iadd that is built from the
 # Dockerfile in this directory is available.
 #
 # The repo must be in unmodified state and the release in question must be
@@ -44,13 +44,8 @@ pushd "${TMPDIR}"
 tar xf "hledger-iadd-${VERSION}.tar.gz"
 cd hledger-iadd-${VERSION}
 
-# Build the binary in a docker image
-docker run --rm -v $(pwd):/home/hledger-iadd hledger-iadd
-
-# Docker creates root-owned binaries. Change the owner to be able to work with it.
-#
-# Tips to avoid this are appreciated!
-sudo chown ${USER}:$(id -gn) hledger-iadd
+# Build the binary in a container
+podman run --rm -v $(pwd):/home/hledger-iadd:z hledger-iadd
 
 # Pack the whole thing up
 tar -cJf "hledger-iadd-${VERSION}-archlinux.tar.xz" hledger-iadd
