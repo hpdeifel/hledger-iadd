@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
 
 module View
   ( viewState
@@ -14,8 +15,15 @@ import           Brick.Widgets.WrappedText
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time hiding (parseTime)
 import qualified Hledger as HL
+
+-- hledger-lib 1.17 will switch showTransaction to ISO date format, which means
+-- that ISO dates yyyy-mm-dd will be added to the journal instead of yyyy/mm/dd.
+--
+-- Thus, for hledger-lib >=1.17, we also show the ISO format in the UI
+#if !MIN_VERSION_hledger_lib(1,16,99)
+import           Data.Time hiding (parseTime)
+#endif
 
 import           Model
 
@@ -23,7 +31,11 @@ viewState :: Step -> Widget n
 viewState (DateQuestion comment) = txt $
   if T.null comment then " " else viewComment comment
 viewState (DescriptionQuestion date comment) = txt $
+#if MIN_VERSION_hledger_lib(1,16,99)
+  T.pack (show date)
+#else
   T.pack (formatTime defaultTimeLocale "%Y/%m/%d" date)
+#endif
   <> viewComment comment
 viewState (AccountQuestion trans comment) = txt $
   showTransaction trans <> viewComment comment
