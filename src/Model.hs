@@ -281,7 +281,7 @@ transactionBalanced trans = HL.isTransactionBalanced Nothing trans
 -- | Computes the sum of all postings in the transaction and inverts it
 negativeAmountSum :: HL.Transaction -> HL.MixedAmount
 negativeAmountSum trans =
-  let (rsum, _, _) = HL.transactionPostingBalances trans
+  let rsum = HL.sumPostings $ HL.realPostings trans
   in HL.divideMixedAmount (-1) rsum
 
 -- | Compare two transaction descriptions based on their number of occurences in
