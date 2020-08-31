@@ -190,7 +190,10 @@ isDuplicateTransactionSpec = do
 
   it "ignores amount presentation" $ do
     let a1 = (HL.eur 0.5) { HL.astyle = HL.amountstyle}
-        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = 15} }
+        -- We use 'read' in the following because hledger-lib 1.19 changed the
+        -- type of 'asprecision' from Int to 'AmountPrecision'. 'read' works in
+        -- both cases.
+        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = read "15"} }
 
         p1 = mkPosting ("Test", -1)
         p2 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.Mixed [a1] }
