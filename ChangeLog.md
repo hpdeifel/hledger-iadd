@@ -1,3 +1,7 @@
+# 1.3.12   [2020-08-31]
+
+  - dependencies: Fix tests build with hledger-lib-1.19
+
 # 1.3.11   [2020-06-04]
 
   - bugfix: Fix check for balanced transactions in the presence of commodities.
