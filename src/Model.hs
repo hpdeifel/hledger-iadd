@@ -98,7 +98,7 @@ undo current = case current of
 context :: HL.Journal -> MatchAlgo -> DateFormat -> Text -> Step -> IO [Text]
 context _ _ dateFormat entryText (DateQuestion _) = parseDateWithToday dateFormat entryText >>= \case
   Left _ -> return []
-  Right date -> return [T.pack $ HL.showDate date]
+  Right date -> return [HL.showDate date]
 context j matchAlgo _ entryText (DescriptionQuestion _ _) = return $
   let descs = HL.journalDescriptions j
   in sortBy (descUses j) $ filter (matches matchAlgo entryText) descs

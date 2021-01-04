@@ -82,4 +82,4 @@ viewComment comment
 
 
 showTransaction :: HL.Transaction -> Text
-showTransaction = T.stripEnd . T.pack . HL.showTransactionUnelided
+showTransaction = T.stripEnd . HL.showTransaction
