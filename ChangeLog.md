@@ -1,3 +1,8 @@
+# 1.3.13   [2021-03-10]
+
+  - dependencies: Support (and require) hledger-lib-1.21
+  - dependencies: Support megaparsec-9
+
 # 1.3.12   [2020-08-31]
 
   - dependencies: Fix tests build with hledger-lib-1.19
