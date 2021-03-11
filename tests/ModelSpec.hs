@@ -91,7 +91,8 @@ accByFreqSpec = do
 
   it "includes accounts from the 'account directive'" $ do
     let j = (mkJournal [ ((2017, 1, 1), "Foo", [("x:y", 2)]) ]) { HL.jdeclaredaccounts = [("foo:bar", HL.nullaccountdeclarationinfo)]}
-    accountsByFrequency j `shouldContain` ["foo:bar", "foo"]
+    accountsByFrequency j `shouldContain` ["foo:bar"]
+    accountsByFrequency j `shouldContain` ["foo"]
 
 
 setCurrentCommentSpec :: Spec
@@ -193,7 +194,7 @@ isDuplicateTransactionSpec = do
         -- We use 'read' in the following because hledger-lib 1.19 changed the
         -- type of 'asprecision' from Int to 'AmountPrecision'. 'read' works in
         -- both cases.
-        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = read "15"} }
+        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = HL.Precision 2 } }
 
         p1 = mkPosting ("Test", -1)
         p2 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.Mixed [a1] }
