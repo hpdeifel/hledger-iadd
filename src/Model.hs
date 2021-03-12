@@ -17,6 +17,7 @@ module Model
        -- * Helpers exported for easier testing
        , accountsByFrequency
        , isDuplicateTransaction
+       , isSubsetTransaction
        ) where
 
 import           Data.Function
@@ -31,9 +32,11 @@ import           Data.Time.Ext hiding (parseTime)
 import qualified Hledger as HL
 import           Data.Foldable
 import           Control.Applicative
+import           Control.Arrow ((&&&))
 
 import           AmountParser
 import           DateParser
+
 
 type Comment = Text
 type Duplicate = Bool
@@ -61,7 +64,7 @@ nextStep journal dateFormat entryText current = case current of
 
   DescriptionQuestion day comment -> return $ Right $ Step $
     AccountQuestion HL.nulltransaction { HL.tdate = day
-                                       , HL.tdescription = (fromEither entryText)
+                                       , HL.tdescription = fromEither entryText
                                        , HL.tcomment = comment
                                        }
                                        "" -- empty comment
@@ -69,7 +72,7 @@ nextStep journal dateFormat entryText current = case current of
     | T.null (fromEither entryText) && transactionBalanced trans
       -> return $ Right $ Step $ FinalQuestion trans (isDuplicateTransaction journal trans)
     | T.null (fromEither entryText)  -- unbalanced
-      -> return $ Left $ "Transaction not balanced! Please balance your transaction before adding it to the journal."
+      -> return $ Left "Transaction not balanced! Please balance your transaction before adding it to the journal."
     | otherwise        -> return $ Right $ Step $
       AmountQuestion (fromEither entryText) trans comment
   AmountQuestion name trans comment -> case parseAmount journal (fromEither entryText) of
@@ -105,7 +108,7 @@ context j matchAlgo _ entryText (DescriptionQuestion _ _) = return $
 context j matchAlgo _ entryText (AccountQuestion _ _) = return $
   let names = accountsByFrequency j
   in  filter (matches matchAlgo entryText) names
-context journal _ _ entryText (AmountQuestion _ _ _) = return $
+context journal _ _ entryText (AmountQuestion {}) = return $
   maybeToList $ T.pack . HL.showMixedAmount <$> trySumAmount journal entryText
 context _ _ _ _  (FinalQuestion _ _) = return []
 
@@ -119,17 +122,17 @@ suggest _ _ (DescriptionQuestion _ _) = return Nothing
 suggest journal _ (AccountQuestion trans _) = return $
   if numPostings trans /= 0 && transactionBalanced trans
     then Nothing
-    else HL.paccount <$> (suggestAccountPosting journal trans)
-suggest journal _ (AmountQuestion account trans _) = return $ fmap (T.pack . HL.showMixedAmount) $ do
+    else HL.paccount <$> suggestAccountPosting journal trans
+suggest journal _ (AmountQuestion account trans _) = return $ fmap (T.pack . HL.showMixedAmount) $
   case findLastSimilar journal trans of
     Nothing
       | null (HL.tpostings trans)
         -> Nothing  -- Don't suggest an amount for first account
       | otherwise
         -> Just $ negativeAmountSum trans
-    Just last
+    Just  last
       | transactionBalanced trans || (trans `isSubsetTransaction` last)
-        -> HL.pamount <$> (findPostingByAcc account last)
+        -> HL.pamount <$> findPostingByAcc account last
       | otherwise
         -> Just $ negativeAmountSum trans
 suggest _ _ (FinalQuestion _ _) = return $ Just "y"
@@ -179,16 +182,16 @@ matches algo a b
   | otherwise = matches' (T.toCaseFold a) (T.toCaseFold b)
   where
     matches' a' b'
-      | algo == Fuzzy && T.any (== ':') b' = all (`fuzzyMatch` (T.splitOn ":" b')) (T.words a')
+      | algo == Fuzzy && T.any (== ':') b' = all (`fuzzyMatch` T.splitOn ":" b') (T.words a')
       | otherwise = all (`T.isInfixOf` b') (T.words a')
 
 fuzzyMatch :: Text -> [Text] -> Bool
 fuzzyMatch _ [] = False
-fuzzyMatch query (part : partsRest) = case (T.uncons query) of
+fuzzyMatch query (part : partsRest) = case T.uncons query of
   Nothing -> True
   Just (c, queryRest)
     | c == ':' -> fuzzyMatch queryRest partsRest
-    | otherwise -> fuzzyMatch query partsRest || case (T.uncons part) of
+    | otherwise -> fuzzyMatch query partsRest || case T.uncons part of
       Nothing -> False
       Just (c2, partRest)
         | c == c2 -> fuzzyMatch queryRest (partRest : partsRest)
@@ -202,7 +205,7 @@ post' account amount comment = HL.nullposting
   }
 
 addPosting :: HL.Posting -> HL.Transaction -> HL.Transaction
-addPosting p t = t { HL.tpostings = (HL.tpostings t) ++ [p] }
+addPosting p t = t { HL.tpostings = HL.tpostings t ++ [p] }
 
 trySumAmount :: HL.Journal -> Text -> Maybe HL.MixedAmount
 trySumAmount ctx = either (const Nothing) Just . parseAmount ctx
@@ -230,7 +233,7 @@ suggestNextPosting current reference =
 suggestCorrespondingPosting :: HL.Transaction -> HL.Transaction -> Maybe HL.Posting
 suggestCorrespondingPosting current reference =
   let postingsEntered = length curPostings in
-  if postingsEntered < (length refPostings) then
+  if postingsEntered < length refPostings then
     Just (refPostings !! postingsEntered)
   else
     suggestNextPosting current reference
@@ -245,7 +248,7 @@ suggestAccountPosting :: HL.Journal -> HL.Transaction -> Maybe HL.Posting
 suggestAccountPosting journal trans =
   case findLastSimilar journal trans of
     Just t -> suggestNextPosting trans t
-    Nothing -> (last <$> listToMaybe' (HL.jtxns journal)) >>= (suggestCorrespondingPosting trans)
+    Nothing -> listToMaybe' (HL.jtxns journal) >>= suggestCorrespondingPosting trans . last
 
 -- | Return the first Posting that matches the given account name in the transaction
 findPostingByAcc :: HL.AccountName -> HL.Transaction -> Maybe HL.Posting
@@ -264,8 +267,9 @@ isSubsetTransaction current origin =
     null (deleteFirstsBy cmpPosting currPostings origPostings)
   where
     cmpPosting a b =  HL.paccount a == HL.paccount b
-                   && HL.pamount a  == HL.pamount b
+                   && cmpAmount (HL.pamount a) (HL.pamount b)
 
+    cmpAmount (HL.Mixed a) (HL.Mixed b) = ((==) `on` map (HL.acommodity &&& HL.aquantity)) a b
 
 listToMaybe' :: [a] -> Maybe [a]
 listToMaybe' [] = Nothing
@@ -276,7 +280,7 @@ numPostings = length . HL.tpostings
 
 -- | Returns True if all postings balance and the transaction is not empty
 transactionBalanced :: HL.Transaction -> Bool
-transactionBalanced trans = HL.isTransactionBalanced Nothing trans
+transactionBalanced = HL.isTransactionBalanced Nothing
 
 -- | Computes the sum of all postings in the transaction and inverts it
 negativeAmountSum :: HL.Transaction -> HL.MixedAmount
@@ -287,7 +291,7 @@ negativeAmountSum trans =
 -- | Compare two transaction descriptions based on their number of occurences in
 -- the given journal.
 descUses :: HL.Journal -> Text -> Text -> Ordering
-descUses journal = compare `on` (Down . flip HM.lookup usesMap)
+descUses journal = compare `on` Down . flip HM.lookup usesMap
   where usesMap = foldr (count . HL.tdescription) HM.empty $
                   HL.jtxns journal
         -- Add one to the current count of this element
@@ -305,12 +309,12 @@ accountsByFrequency journal =
     declaredAccounts = HL.expandAccountNames (HL.journalAccountNamesDeclared journal)
     mapWithDeclared = foldr insertIfNotPresent mapWithSubaccounts declaredAccounts
   in
-    map fst (sortBy (compare `on` (Down . snd)) (HM.toList mapWithDeclared))
+    map fst (sortBy (compare `on` Down . snd) (HM.toList mapWithDeclared))
 
 
   where
     insertOrPlusOne = HM.alter (Just . maybe 1 (+1))
-    insertIfNotPresent account = HM.insertWith (flip const) account 0
+    insertIfNotPresent account = HM.insertWith (\ _ x -> x) account 0
     subaccounts m = HL.expandAccountNames (HM.keys m)
 
 -- | Deterimine if a given transaction already occurs in the journal
@@ -333,7 +337,7 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
     postingAttributes =
       [ cmp HL.pdate, cmp HL.pdate2, cmp HL.pstatus, cmp HL.paccount
       , cmpMixedAmount `on` HL.pamount, cmpPType `on` HL.ptype
-      , (fmap fold . liftA2 cmpBalanceAssertion) `on` HL.pbalanceassertion
+      , fmap fold . liftA2 cmpBalanceAssertion `on` HL.pbalanceassertion
       ]
 
     -- | Ammount attributes that are compared to determine duplicates

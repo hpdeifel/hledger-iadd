@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# LANGUAGE TypeApplications #-}
 module ModelSpec (spec) where
 
 import           Test.Hspec
@@ -23,7 +24,7 @@ spec = do
   describe "setCurrentComment" setCurrentCommentSpec
   describe "setTransactionComment" setTransactionCommentSpec
   describe "isDuplicateTransaction" isDuplicateTransactionSpec
-
+  describe "isSubsetTransaction" isSubsetTransactionSpec
 
 suggestSpec :: Spec
 suggestSpec = do
@@ -205,6 +206,17 @@ isDuplicateTransactionSpec = do
         t2 = t0 { HL.tpostings = [p1,p3,p3] }
 
     isDuplicateTransaction (HL.addTransaction t1 HL.nulljournal) t2 `shouldBe` True
+
+isSubsetTransactionSpec :: Spec
+isSubsetTransactionSpec =
+  it "ignores amount presentation" $ do
+    let t1 = mkTransaction ((2021,3,12), "Test", [("Test", 1)])
+        t2' = mkTransaction ((2021,3,12), "Test", [("Toast", -1)])
+        testPosting = HL.nullposting
+          { HL.paccount = "Test"
+          , HL.pamount = HL.mixed [ (HL.eur 1) { HL.astyle = HL.amountstyle { HL.asdecimalpoint = Just ';' }}]}
+        t2 = t2' { HL.tpostings =  testPosting : HL.tpostings t2' }
+    isSubsetTransaction t1 t2 `shouldBe` True
 
 -- Helpers
 
