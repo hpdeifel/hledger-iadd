@@ -30,11 +30,10 @@ copyright:           2018 Hans-Peter Deifel
 category:            Finance, Console
 build-type:          Simple
 cabal-version:       >=1.10
-tested-with:         GHC ==8.0.2
-                   , GHC ==8.2.2
-                   , GHC ==8.4.4
-                   , GHC ==8.6.3
-                     
+tested-with:         GHC ==8.6.5
+                   , GHC ==8.8.4
+                   , GHC ==8.10.4
+
 extra-source-files:
   doc/screencast.gif
   README.md
