@@ -1,4 +1,4 @@
-# NEXT VERSION
+# 1.3.14  [2021-03-13]
 
   - bugfix: Fix test failures
   - bugfix: Fix amount suggestion in some circumstances
