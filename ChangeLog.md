@@ -1,3 +1,10 @@
+# NEXT VERSION
+
+  - bugfix: Fix test failures
+  - bugfix: Fix amount suggestion in some circumstances
+  - dependencies: Remove GHC 8.0, 8.2 and 8.4 from list of officially supported
+    compilers. They might still work
+
 # 1.3.13   [2021-03-10]
 
   - dependencies: Support (and require) hledger-lib-1.21
