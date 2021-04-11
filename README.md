@@ -96,6 +96,8 @@ And finally you're ready to build and install `hledger-iadd`:
 
 ## Usage
 
+*[YouTube video demonstrating basic interactions](https://www.youtube.com/watch?v=ZuCT9EzryaI)*
+
 You can start the program either with
 
     hledger iadd
