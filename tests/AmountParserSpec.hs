@@ -34,7 +34,7 @@ spec = describe "parseAmount" $ do
     parseAmount HL.nulljournal "23 +" `shouldSatisfy` isLeft
 
 amount :: Text -> HL.MixedAmount
-amount = HL.mixed . pure . fromRight . runIdentity . runParserT (evalStateT HL.amountp HL.nulljournal) ""
+amount = HL.mixed . Just . fromRight . runIdentity . runParserT (evalStateT HL.amountp HL.nulljournal) ""
 
 fromRight :: Either a b -> b
 fromRight = either (error "fromRight: Left value encountered") id
