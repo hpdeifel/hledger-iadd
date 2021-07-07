@@ -198,8 +198,8 @@ isDuplicateTransactionSpec = do
         a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = HL.Precision 15 } }
 
         p1 = mkPosting ("Test", -1)
-        p2 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.Mixed [a1] }
-        p3 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.Mixed [a2] }
+        p2 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.mixedAmount a1 }
+        p3 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.mixedAmount a2 }
 
         t0 = mkTransaction ((2017,9,23), "Test", [])
         t1 = t0 { HL.tpostings = [p1,p2,p2] }

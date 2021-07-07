@@ -269,7 +269,7 @@ isSubsetTransaction current origin =
     cmpPosting a b =  HL.paccount a == HL.paccount b
                    && cmpAmount (HL.pamount a) (HL.pamount b)
 
-    cmpAmount (HL.Mixed a) (HL.Mixed b) = ((==) `on` map (HL.acommodity &&& HL.aquantity)) a b
+    cmpAmount a b = ((==) `on` map (HL.acommodity &&& HL.aquantity)) (HL.amounts a) (HL.amounts b)
 
 listToMaybe' :: [a] -> Maybe [a]
 listToMaybe' [] = Nothing
@@ -280,7 +280,7 @@ numPostings = length . HL.tpostings
 
 -- | Returns True if all postings balance and the transaction is not empty
 transactionBalanced :: HL.Transaction -> Bool
-transactionBalanced = HL.isTransactionBalanced Nothing
+transactionBalanced = HL.isTransactionBalanced HL.balancingOpts
 
 -- | Computes the sum of all postings in the transaction and inverts it
 negativeAmountSum :: HL.Transaction -> HL.MixedAmount
@@ -371,13 +371,13 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
     -- | Compare two mixed amounts by first sorting the individual amounts
     -- deterministically and then comparing them one-by-one.
     cmpMixedAmount :: HL.MixedAmount -> HL.MixedAmount -> Ordering
-    cmpMixedAmount (HL.Mixed as1) (HL.Mixed as2) =
+    cmpMixedAmount as1 as2 =
       let
-        sortedAs1 = sortBy cmpAmount as1
-        sortedAs2 = sortBy cmpAmount as2
+        sortedAs1 = sortBy cmpAmount $ HL.amounts as1
+        sortedAs2 = sortBy cmpAmount $ HL.amounts as2
       in
         mconcat $
-          compare (length as1) (length as2) : zipWith cmpAmount sortedAs1 sortedAs2
+          compare (length $ HL.amounts as1) (length $ HL.amounts as2) : zipWith cmpAmount sortedAs1 sortedAs2
 
     cmpBalanceAssertion :: HL.BalanceAssertion -> HL.BalanceAssertion -> Ordering
     cmpBalanceAssertion = lexical [cmp HL.baamount, cmp HL.batotal]
