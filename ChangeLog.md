@@ -1,4 +1,4 @@
-# NEXT VERSION
+# 1.3.15  [2021-07-08]
 
   - dependencies: Support (and require) hledger-lib-1.22
   - dependencies: Drop support for GHC <8.6 completely
