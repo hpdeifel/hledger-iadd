@@ -1,3 +1,7 @@
+# NEXT RELEASE
+
+  - dependencies: Support (and require) hledger-lib-1.23
+
 # 1.3.15  [2021-07-08]
 
   - dependencies: Support (and require) hledger-lib-1.22

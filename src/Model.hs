@@ -280,7 +280,7 @@ numPostings = length . HL.tpostings
 
 -- | Returns True if all postings balance and the transaction is not empty
 transactionBalanced :: HL.Transaction -> Bool
-transactionBalanced = HL.isTransactionBalanced HL.balancingOpts
+transactionBalanced = HL.isTransactionBalanced HL.defbalancingopts
 
 -- | Computes the sum of all postings in the transaction and inverts it
 negativeAmountSum :: HL.Transaction -> HL.MixedAmount
