@@ -10,5 +10,5 @@ RUN mkdir /build/
 
 WORKDIR /build/
 CMD cp -r /home/hledger-iadd/* /build/ && cabal new-update && cabal new-build && \
-	cp `cabal list-bin exe:ghledger-iadd` /home/hledger-iadd/ && \
+	cp `cabal list-bin exe:hledger-iadd` /home/hledger-iadd/ && \
 	strip /home/hledger-iadd/hledger-iadd
