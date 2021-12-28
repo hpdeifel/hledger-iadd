@@ -126,13 +126,25 @@ suggest journal _ (AccountQuestion trans _) = return $
 suggest journal _ (AmountQuestion account trans _) = return $ fmap (T.pack . HL.showMixedAmount) $
   case findLastSimilar journal trans of
     Nothing
+      -- no similar transaction, first posting => nothing to suggest
       | null (HL.tpostings trans)
-        -> Nothing  -- Don't suggest an amount for first account
+        -> Nothing
+      -- no similar transaction, so just try to balance the new one
       | otherwise
         -> Just $ negativeAmountSum trans
-    Just  last
-      | transactionBalanced trans || (trans `isSubsetTransaction` last)
+    Just last
+      -- current transaction already balanced => see we have a posting with the
+      -- current account in the reference transaction
+      | transactionBalanced trans
         -> HL.pamount <$> findPostingByAcc account last
+      -- transaction not balanced, but we're following the reference
+      -- transaction. => Try to find a matching posting for the current account.
+      -- Otherwise, just balance the current transaction.
+      | trans `isSubsetTransaction` last
+        -> (HL.pamount <$> findPostingByAcc account last)
+           <|> Just (negativeAmountSum trans)
+      -- we're not balanced and the reference transaction doesn't match anymore
+      -- => Just balance the current transaction.
       | otherwise
         -> Just $ negativeAmountSum trans
 suggest _ _ (FinalQuestion _ _) = return $ Just "y"
