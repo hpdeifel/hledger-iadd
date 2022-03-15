@@ -1,4 +1,4 @@
-# NEXT VERSION
+# 1.3.17  [2022-03-15]
 
   - dependencies: Support brick 0.68
   - dependencies: Allow hledger-lib 1.25
