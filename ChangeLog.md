@@ -1,3 +1,9 @@
+# NEXT VERSION
+
+  - dependencies: Support brick 0.68
+  - dependencies: Allow hledger-lib 1.25
+  - dependencies: Allow megaparsec 9.2
+
 # 1.3.16  [2021-09-22]
 
   - dependencies: Support (and require) hledger-lib-1.23
