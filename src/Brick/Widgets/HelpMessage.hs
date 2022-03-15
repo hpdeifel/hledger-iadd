@@ -11,7 +11,6 @@ module Brick.Widgets.HelpMessage
        ) where
 
 import Brick
-import Brick.Markup
 import Brick.Widgets.Border
 import Graphics.Vty
 import Data.Text (Text)
@@ -84,12 +83,12 @@ resetHelpWidget :: HelpWidget n -> EventM n ()
 resetHelpWidget = vScrollToBeginning . scroller
 
 key :: Text -> Text -> Widget n
-key k h =  markup (("  " <> k) @? (helpAttr <> "key"))
-       <+> padLeft Max (markup (h @? (helpAttr <> "description")))
+key k h =  withAttr (helpAttr <> "key") (txt ("  " <> k))
+       <+> padLeft Max (withAttr (helpAttr <> "description") (txt h))
 
 helpAttr :: AttrName
 helpAttr = "help"
 
 section :: Title -> [(Text, Text)] -> Widget n
-section title keys =  markup ((title <> ":") @? (helpAttr <> "title"))
+section title keys =  withAttr (helpAttr <> "title") (txt (title <> ":"))
                   <=> vBox (map (uncurry key) keys)
