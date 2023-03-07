@@ -67,7 +67,7 @@ editContentsL = origEditor . E.editContentsL
 --  - Alt-Backspace: Delete the previous word
 --  - Ctrl-w: Delete the previous word
 --  - Alt-d: Delete the next word
-handleEditorEvent :: Event -> Editor n -> EventM n (Editor n)
+handleEditorEvent :: Eq n => Event -> Editor n -> EventM n (Editor n)
 handleEditorEvent event edit = case event of
   EvKey (KChar 'f') [MCtrl] -> return $ applyEdit moveRight edit
   EvKey (KChar 'b') [MCtrl] -> return $ applyEdit moveLeft edit
@@ -83,7 +83,7 @@ handleEditorEvent event edit = case event of
   EvKey KEnd        []      -> return $ applyEdit gotoEOL edit
 
   _ -> do
-    newOrig <- E.handleEditorEvent event (edit^.origEditor)
+    newOrig <- E.handleEditorEvent (VtyEvent event) (edit^.origEditor)
     return $ edit & origEditor .~ newOrig
 
 

@@ -46,7 +46,7 @@ commentWidget name prompt comment =
 data CommentAction n = CommentContinue (CommentWidget n)
                      | CommentFinished Text
 
-handleCommentEvent :: Event -> CommentWidget n -> EventM n (CommentAction n)
+handleCommentEvent :: Eq n => Event -> CommentWidget n -> EventM n (CommentAction n)
 handleCommentEvent ev widget = case ev of
   EvKey KEsc [] -> return $ CommentFinished (origComment widget)
   EvKey KEnter [] -> return $ CommentFinished (commentDialogComment widget)
