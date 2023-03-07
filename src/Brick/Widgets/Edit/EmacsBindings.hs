@@ -10,6 +10,7 @@ module Brick.Widgets.Edit.EmacsBindings
   ( Editor
   , editorText
   , getEditContents
+  , applyEditM
   , applyEdit
   , editContentsL
   , handleEditorEvent
@@ -23,6 +24,7 @@ import           Data.Text.Zipper
 import           Data.Text (Text)
 import           Lens.Micro.TH
 import           Lens.Micro
+import           Lens.Micro.Mtl
 
 import           Data.Text.Zipper.Generic.Words
 
@@ -49,7 +51,10 @@ getEditContents edit = edit ^. origEditor . to E.getEditContents
 
 -- | Wrapper for 'E.applyEdit' specialized to 'Text'
 applyEdit :: (TextZipper Text -> TextZipper Text) -> Editor n -> Editor n
-applyEdit f = over origEditor (E.applyEdit f)
+applyEdit f edit = edit & origEditor %~ E.applyEdit f
+
+applyEditM :: (TextZipper Text -> TextZipper Text) -> EventM n (Editor n) ()
+applyEditM f = origEditor %= E.applyEdit f
 
 -- | Wrapper for 'E.editContentsL' specialized to 'Text'
 editContentsL :: Lens (Editor n) (Editor n) (TextZipper Text) (TextZipper Text)
@@ -67,24 +72,22 @@ editContentsL = origEditor . E.editContentsL
 --  - Alt-Backspace: Delete the previous word
 --  - Ctrl-w: Delete the previous word
 --  - Alt-d: Delete the next word
-handleEditorEvent :: Eq n => Event -> Editor n -> EventM n (Editor n)
-handleEditorEvent event edit = case event of
-  EvKey (KChar 'f') [MCtrl] -> return $ applyEdit moveRight edit
-  EvKey (KChar 'b') [MCtrl] -> return $ applyEdit moveLeft edit
+handleEditorEvent :: Eq n => Event -> EventM n (Editor n) ()
+handleEditorEvent event = case event of
+  EvKey (KChar 'f') [MCtrl] -> applyEditM moveRight
+  EvKey (KChar 'b') [MCtrl] -> applyEditM moveLeft
 
-  EvKey (KChar 'f') [MMeta] -> return $ applyEdit moveWordRight edit
-  EvKey (KChar 'b') [MMeta] -> return $ applyEdit moveWordLeft edit
+  EvKey (KChar 'f') [MMeta] -> applyEditM moveWordRight
+  EvKey (KChar 'b') [MMeta] -> applyEditM moveWordLeft
 
-  EvKey KBS         [MMeta] -> return $ applyEdit deletePrevWord edit
-  EvKey (KChar 'w') [MCtrl] -> return $ applyEdit deletePrevWord edit
-  EvKey (KChar 'd') [MMeta] -> return $ applyEdit deleteWord edit
+  EvKey KBS         [MMeta] -> applyEditM deletePrevWord
+  EvKey (KChar 'w') [MCtrl] -> applyEditM deletePrevWord
+  EvKey (KChar 'd') [MMeta] -> applyEditM deleteWord
 
-  EvKey KHome       []      -> return $ applyEdit gotoBOL edit
-  EvKey KEnd        []      -> return $ applyEdit gotoEOL edit
+  EvKey KHome       []      -> applyEditM gotoBOL
+  EvKey KEnd        []      -> applyEditM gotoEOL
 
-  _ -> do
-    newOrig <- E.handleEditorEvent (VtyEvent event) (edit^.origEditor)
-    return $ edit & origEditor .~ newOrig
+  _ -> zoom origEditor $ E.handleEditorEvent (VtyEvent event)
 
 
 -- | Wrapper for 'E.renderEditor' specialized to 'Text'

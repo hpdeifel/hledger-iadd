@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Brick.Widgets.CommentDialog
   ( CommentWidget
@@ -19,55 +20,61 @@ import           Graphics.Vty.Input
 import qualified Data.Text as T
 import           Data.Text (Text)
 
+import           Lens.Micro
+import           Lens.Micro.TH
+import           Lens.Micro.Mtl
+
 import           Brick.Widgets.Edit.EmacsBindings
+import Control.Monad.Trans.Reader
 
 data CommentWidget n = CommentWidget
-  { origComment :: Text
-  , textArea :: Editor n
-  , dialogWidget :: Dialog ()
-  , promptPrefix :: Text
+  { _origComment :: Text
+  , _textArea :: Editor n
+  , _dialogWidget :: Dialog () n
+  , _promptPrefix :: Text
   }
 
-commentWidget :: n -> Text -> Text -> CommentWidget n
+makeLenses ''CommentWidget
+
+commentWidget :: Eq n => n -> Text -> Text -> CommentWidget n
 commentWidget name prompt comment =
   let
-    title = "ESC: cancel, RET: accept, Alt-RET: New line"
+    title = txt "ESC: cancel, RET: accept, Alt-RET: New line"
     maxWidth = 80
     diag = dialog (Just title) Nothing maxWidth
     edit = editorText name (txt . T.unlines) Nothing comment
   in
     CommentWidget
-      { origComment = comment
-      , textArea = applyEdit gotoEnd edit
-      , dialogWidget = diag
-      , promptPrefix = prompt
+      { _origComment = comment
+      , _textArea = applyEdit gotoEnd edit
+      , _dialogWidget = diag
+      , _promptPrefix = prompt
       }
 
-data CommentAction n = CommentContinue (CommentWidget n)
-                     | CommentFinished Text
+data CommentAction = CommentContinue | CommentFinished Text
 
-handleCommentEvent :: Eq n => Event -> CommentWidget n -> EventM n (CommentAction n)
-handleCommentEvent ev widget = case ev of
-  EvKey KEsc [] -> return $ CommentFinished (origComment widget)
-  EvKey KEnter [] -> return $ CommentFinished (commentDialogComment widget)
-  EvKey KEnter [MMeta] -> return $ CommentContinue $
-    widget { textArea = applyEdit breakLine (textArea widget) }
+handleCommentEvent :: Eq n => Event -> EventM n (CommentWidget n) CommentAction
+handleCommentEvent ev = case ev of
+  EvKey KEsc [] -> CommentFinished <$> use origComment
+  EvKey KEnter [] -> CommentFinished <$> gets commentDialogComment
+  EvKey KEnter [MMeta] -> do
+    zoom textArea $ applyEditM breakLine
+    return CommentContinue
   _ -> do
-    textArea' <- handleEditorEvent ev (textArea widget)
-    return $ CommentContinue $
-      CommentWidget (origComment widget) textArea' (dialogWidget widget) (promptPrefix widget)
+    zoom textArea $ handleEditorEvent ev
+    return CommentContinue
 
 renderCommentWidget :: (Ord n, Show n) => CommentWidget n -> Widget n
 renderCommentWidget widget =
   let
-    height = min (length (getEditContents (textArea widget)) + 4) 24
+    height = min (length (getEditContents (widget^.textArea)) + 4) 24
     textArea' =  padTop (Pad 1) $
-      txt (promptPrefix widget <> ": ") <+> renderEditor True (textArea widget)
+      txt (widget^.promptPrefix <> ": ") <+> renderEditor True (widget^.textArea)
   in
-    vCenterLayer $ vLimit height $ renderDialog (dialogWidget widget) textArea'
+    vCenterLayer $ vLimit height $ renderDialog (widget^.dialogWidget) textArea'
 
 commentDialogComment :: CommentWidget n -> Text
-commentDialogComment = T.intercalate "\n" . getEditContents . textArea
+commentDialogComment = T.intercalate "\n" . getEditContents . _textArea
 
 gotoEnd :: Monoid a => TextZipper a -> TextZipper a
 gotoEnd zipper =

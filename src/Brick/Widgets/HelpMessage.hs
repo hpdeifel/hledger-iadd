@@ -63,32 +63,32 @@ renderHelpWidget' name (KeyBindings bindings) = Widget Fixed Fixed $ do
 scroller :: HelpWidget n -> ViewportScroll n
 scroller HelpWidget{name} = viewportScroll name
 
-handleHelpEvent :: HelpWidget n -> Event -> EventM n (HelpWidget n)
-handleHelpEvent help (EvKey k _) = case k of
-  KChar 'j' -> vScrollBy (scroller help) 1 >> return help
-  KDown     -> vScrollBy (scroller help) 1 >> return help
-  KChar 'k' -> vScrollBy (scroller help) (-1) >> return help
-  KUp       -> vScrollBy (scroller help) (-1) >> return help
-  KChar 'g' -> vScrollToBeginning (scroller help) >> return help
-  KHome     -> vScrollToBeginning (scroller help) >> return help
-  KChar 'G' -> vScrollToEnd (scroller help) >> return help
-  KEnd      -> vScrollToEnd (scroller help) >> return help
-  KPageUp   -> vScrollPage (scroller help) Up >> return help
-  KPageDown -> vScrollPage (scroller help) Down >> return help
-  _         -> return help
-handleHelpEvent help _ = return help
+handleHelpEvent :: Event -> EventM n (HelpWidget n) ()
+handleHelpEvent (EvKey k _) = case k of
+  KChar 'j' -> gets scroller >>= \s -> vScrollBy s 1
+  KDown     -> gets scroller >>= \s -> vScrollBy s 1
+  KChar 'k' -> gets scroller >>= \s -> vScrollBy s (-1)
+  KUp       -> gets scroller >>= \s -> vScrollBy s (-1)
+  KChar 'g' -> gets scroller >>= \s -> vScrollToBeginning s
+  KHome     -> gets scroller >>= \s -> vScrollToBeginning s
+  KChar 'G' -> gets scroller >>= \s -> vScrollToEnd s
+  KEnd      -> gets scroller >>= \s -> vScrollToEnd s
+  KPageUp   -> gets scroller >>= \s -> vScrollPage s Up
+  KPageDown -> gets scroller >>= \s -> vScrollPage s Down
+  _         -> return ()
+handleHelpEvent _ = return ()
 
 
-resetHelpWidget :: HelpWidget n -> EventM n ()
+resetHelpWidget :: HelpWidget n -> EventM n s ()
 resetHelpWidget = vScrollToBeginning . scroller
 
 key :: Text -> Text -> Widget n
-key k h =  withAttr (helpAttr <> "key") (txt ("  " <> k))
-       <+> padLeft Max (withAttr (helpAttr <> "description") (txt h))
+key k h =  withAttr (helpAttr <> attrName "key") (txt ("  " <> k))
+       <+> padLeft Max (withAttr (helpAttr <> attrName "description") (txt h))
 
 helpAttr :: AttrName
-helpAttr = "help"
+helpAttr = attrName "help"
 
 section :: Title -> [(Text, Text)] -> Widget n
-section title keys =  withAttr (helpAttr <> "title") (txt (title <> ":"))
+section title keys =  withAttr (helpAttr <> attrName "title") (txt (title <> ":"))
                   <=> vBox (map (uncurry key) keys)

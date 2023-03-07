@@ -2,14 +2,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
 import Brick
-  ( Widget, App(..), AttrMap, BrickEvent(..), Next, EventM
-  , (<=>), (<+>), txt, continue, halt, attrMap, on, fg
+  ( Widget, App(..), AttrMap, BrickEvent(..), EventM
+  , (<=>), (<+>), txt, halt, attrMap, on, fg
   , defaultMain, showFirstCursor, padBottom, Padding(Max,Pad)
-  , padAll, padLeft
+  , padAll, padLeft, nestEventM', nestEventM, modify, gets, get, attrName
   )
 import Brick.Widgets.BetterDialog (dialog)
 import Brick.Widgets.Border (hBorder)
@@ -40,7 +41,8 @@ import Data.Text.Zipper (gotoEOL, textZipper)
 import qualified Data.Vector as V
 import qualified Hledger as HL
 import qualified Hledger.Read.JournalReader as HL
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (^.), (%~))
+import Lens.Micro.Mtl
 import qualified Options.Applicative as OA
 import Options.Applicative
   ( ReadM, Parser, value, help, long, metavar, switch, helper, fullDesc, info
@@ -62,22 +64,11 @@ import DateParser
 import Model
 import View
 
+import Lens.Micro.TH
+
 import Data.Version (showVersion)
 import qualified Paths_hledger_iadd as Paths
 
-data AppState = AppState
-  { asEditor :: Editor Name
-  , asStep :: Step
-  , asJournal :: HL.Journal
-  , asContext :: List Name Text
-  , asSuggestion :: Maybe Text
-  , asMessage :: Text
-  , asFilename :: FilePath
-  , asDateFormat :: DateFormat
-  , asMatchAlgo :: MatchAlgo
-  , asDialog :: DialogShown
-  , asInputHistory :: [Text]
-  }
 
 data Name = HelpName | ListName | EditorName | CommentName
   deriving (Ord, Show, Eq)
@@ -93,6 +84,25 @@ data DialogShown = NoDialog
                  | QuitDialog
                  | AbortDialog
                  | CommentDialog CommentType (CommentWidget Name)
+
+
+
+data AppState = AppState
+  { _asEditor :: Editor Name
+  , _asStep :: Step
+  , _asJournal :: HL.Journal
+  , _asContext :: List Name Text
+  , _asSuggestion :: Maybe Text
+  , _asMessage :: Text
+  , _asFilename :: FilePath
+  , _asDateFormat :: DateFormat
+  , _asMatchAlgo :: MatchAlgo
+  , _asDialog :: DialogShown
+  , _asInputHistory :: [Text]
+  }
+
+makeLenses ''AppState
+
 
 myHelpDialog :: DialogShown
 myHelpDialog = HelpDialog (helpWidget HelpName bindings)
@@ -123,7 +133,7 @@ bindings = KeyBindings
      ])]
 
 draw :: AppState -> [Widget Name]
-draw as = case asDialog as of
+draw as = case as^.asDialog of
   HelpDialog h -> [renderHelpWidget h, ui]
   QuitDialog -> [quitDialog, ui]
   AbortDialog -> [abortDialog, ui]
@@ -131,16 +141,16 @@ draw as = case asDialog as of
   NoDialog -> [ui]
 
   where ui =  txt "New Transaction:"
-          <=> padAll 1 (borderLeft $ padLeft (Pad 1) $ viewState (asStep as))
+          <=> padAll 1 (borderLeft $ padLeft (Pad 1) $ viewState (as^.asStep))
           <=> hBorder
-          <=> (viewQuestion (asStep as)
-               <+> viewSuggestion (asSuggestion as)
+          <=> (viewQuestion (as^.asStep)
+               <+> viewSuggestion (as^.asSuggestion)
                <+> txt ": "
-               <+> renderEditor True (asEditor as))
+               <+> renderEditor True (as^.asEditor))
           <=> hBorder
-          <=> expand (viewContext (asContext as))
+          <=> expand (viewContext (as^.asContext))
           <=> hBorder
-          <=> viewMessage (asMessage as)
+          <=> viewMessage (as^.asMessage)
 
         quitDialog = dialog "Quit" "Really quit without saving the current transaction? (Y/n)"
         abortDialog = dialog "Abort" "Really abort this transaction (Y/n)"
@@ -150,99 +160,96 @@ setComment TransactionComment = setTransactionComment
 setComment CurrentComment     = setCurrentComment
 
 -- TODO Refactor to remove code duplication in individual case statements
-event :: AppState -> BrickEvent Name Event -> EventM Name (Next AppState)
-event as (VtyEvent ev) = case asDialog as of
+event :: BrickEvent Name Event -> EventM Name AppState ()
+event (VtyEvent ev) = use asDialog >>= \case
   HelpDialog helpDia -> case ev of
     EvKey key []
-      | key `elem` [KChar 'q', KEsc] -> continue as { asDialog = NoDialog }
+      | key `elem` [KChar 'q', KEsc] -> asDialog .= NoDialog
       | otherwise                    -> do
-          helpDia' <- handleHelpEvent helpDia ev
-          continue as { asDialog = HelpDialog helpDia' }
-    _ -> continue as
+          nestEventM' helpDia (handleHelpEvent ev) >>= assign asDialog . HelpDialog
+    _ -> return ()
   QuitDialog -> case ev of
     EvKey key []
-      | key `elem` [KChar 'y', KEnter] -> halt as
-      | otherwise -> continue as { asDialog = NoDialog }
-    _ -> continue as
+      | key `elem` [KChar 'y', KEnter] -> halt
+      | otherwise -> asDialog .= NoDialog
+    _ -> return ()
   AbortDialog -> case ev of
     EvKey key []
-      | key `elem` [KChar 'y', KEnter] ->
-        liftIO (reset as { asDialog = NoDialog }) >>= continue
-      | otherwise -> continue as { asDialog = NoDialog }
-    _ -> continue as
-  CommentDialog typ dia -> handleCommentEvent ev dia >>= \case
-    CommentContinue dia' ->
-      continue as { asDialog = CommentDialog typ dia'
-                  , asStep = setComment typ (commentDialogComment dia') (asStep as)
-                  }
-    CommentFinished comment ->
-      continue as { asDialog = NoDialog
-                  , asStep = setComment typ comment (asStep as)
-                  }
+      | key `elem` [KChar 'y', KEnter] -> do
+          asDialog .= NoDialog
+          reset
+      | otherwise -> asDialog .= NoDialog
+    _ -> return ()
+  CommentDialog typ dia -> nestEventM dia (handleCommentEvent ev) >>= \case
+    (dia', CommentContinue) -> do
+      asDialog .= CommentDialog typ dia'
+      asStep %= setComment typ (commentDialogComment dia')
+    (_, CommentFinished comment) -> do
+      asDialog .= NoDialog
+      asStep %= setComment typ comment
 
   NoDialog -> case ev of
-    EvKey (KChar 'c') [MCtrl] -> case asStep as of
-      DateQuestion _ -> halt as
-      _              -> continue as { asDialog = QuitDialog }
-    EvKey (KChar 'd') [MCtrl] -> case asStep as of
-      DateQuestion _ -> halt as
-      _              -> continue as { asDialog = QuitDialog }
-    EvKey (KChar 'n') [MCtrl] -> continue as { asContext = listMoveDown $ asContext as
-                                             , asMessage = ""}
-    EvKey KDown [] -> continue as { asContext = listMoveDown $ asContext as
-                                  , asMessage = ""}
-    EvKey (KChar 'p') [MCtrl] -> continue as { asContext = listMoveUp $ asContext as
-                                             , asMessage = ""}
-    EvKey KUp [] -> continue as { asContext = listMoveUp $ asContext as
-                               , asMessage = ""}
-    EvKey (KChar '\t') [] -> continue (insertSelected as)
-    EvKey (KChar ';') [] ->
-      continue as { asDialog = myCommentDialog CurrentComment (getCurrentComment (asStep as)) }
-    EvKey (KChar ';') [MMeta] ->
-      continue as { asDialog = myCommentDialog TransactionComment (getTransactionComment (asStep as)) }
-    EvKey KEsc [] -> case asStep as of
-      DateQuestion _
-        | T.null (editText as) -> halt as
-        | otherwise -> liftIO (reset as) >>= continue
-      _ -> continue as { asDialog = AbortDialog }
-    EvKey (KChar 'z') [MCtrl] -> liftIO (doUndo as) >>= continue
-    EvKey KEnter [MMeta] -> liftIO (doNextStep False as) >>= continue
-    EvKey KEnter [] -> liftIO (doNextStep True as) >>= continue
-    EvKey (KFun 1) [] -> continue as { asDialog = myHelpDialog }
-    EvKey (KChar '?') [MMeta] -> continue as { asDialog = myHelpDialog, asMessage = "Help" }
-    _ -> (AppState <$> handleEditorEvent ev (asEditor as)
-                   <*> return (asStep as)
-                   <*> return (asJournal as)
-                   <*> return (asContext as)
-                   <*> return (asSuggestion as)
-                   <*> return ""
-                   <*> return (asFilename as))
-                   <*> return (asDateFormat as)
-                   <*> return (asMatchAlgo as)
-                   <*> return NoDialog
-                   <*> return (asInputHistory as)
-         >>= liftIO . setContext >>= continue
-event as _ = continue as
+    EvKey (KChar 'c') [MCtrl] -> use asStep >>= \case
+      DateQuestion _ -> halt
+      _              -> asDialog .= QuitDialog
+    EvKey (KChar 'd') [MCtrl] -> use asStep >>= \case
+      DateQuestion _ -> halt
+      _              -> asDialog .= QuitDialog
+    EvKey (KChar 'n') [MCtrl] -> do
+      asContext %= listMoveDown
+      asMessage .= ""
+    EvKey KDown [] -> do
+      asContext %= listMoveDown
+      asMessage .= ""
+    EvKey (KChar 'p') [MCtrl] -> do
+      asContext %= listMoveUp
+      asMessage .= ""
+    EvKey KUp [] -> do
+      asContext %= listMoveUp
+      asMessage .= ""
+    EvKey (KChar '\t') [] -> modify insertSelected
+    EvKey (KChar ';') [] -> do
+      step <- use asStep
+      asDialog .= myCommentDialog CurrentComment (getCurrentComment step)
+    EvKey (KChar ';') [MMeta] -> do
+      step <- use asStep
+      asDialog .= myCommentDialog TransactionComment (getTransactionComment step)
+    EvKey KEsc [] -> use asStep >>= \case
+      DateQuestion _ -> do
+        t <- gets editText
+        if T.null t then halt else reset
+      _ -> asDialog .= AbortDialog
+    EvKey (KChar 'z') [MCtrl] -> doUndo
+    EvKey KEnter [MMeta] -> doNextStep False
+    EvKey KEnter [] -> doNextStep True
+    EvKey (KFun 1) [] -> asDialog .= myHelpDialog
+    EvKey (KChar '?') [MMeta] -> asDialog .= myHelpDialog >> asMessage .= "Help"
+    _ -> do
+      zoom asEditor $ handleEditorEvent ev
+      setContext
+event _ = return ()
 
-reset :: AppState -> IO AppState
-reset as = do
-  sugg <- suggest (asJournal as) (asDateFormat as) (DateQuestion "")
-  return as
-    { asStep = DateQuestion ""
-    , asEditor = clearEdit (asEditor as)
-    , asContext = ctxList V.empty
-    , asSuggestion = sugg
-    , asMessage = "Transaction aborted"
-    }
+reset :: EventM n AppState ()
+reset = do
+  as <- get
+  sugg <- liftIO $ suggest (as^.asJournal) (as^.asDateFormat) (DateQuestion "")
+  
+  asStep .= DateQuestion ""
+  asEditor %= clearEdit
+  asContext .= ctxList V.empty
+  asSuggestion .= sugg
+  asMessage .= "Transaction aborted"
 
-setContext :: AppState -> IO AppState
-setContext as = do
-  ctx <- flip listSimpleReplace (asContext as) . V.fromList <$>
-         context (asJournal as) (asMatchAlgo as) (asDateFormat as) (editText as) (asStep as)
-  return as { asContext = ctx }
+
+setContext :: EventM n AppState ()
+setContext = do
+  as <- get
+  newCtx <- liftIO $ context (as^.asJournal) (as^.asMatchAlgo) (as^.asDateFormat) (editText as) (as^.asStep)
+  asContext %= listSimpleReplace (V.fromList newCtx)
+      
 
 editText :: AppState -> Text
-editText = T.concat . getEditContents . asEditor
+editText = T.concat . getEditContents . _asEditor
 
 -- | Add a tranaction at the end of a journal
 --
@@ -251,74 +258,71 @@ editText = T.concat . getEditContents . asEditor
 addTransactionEnd :: HL.Transaction -> HL.Journal -> HL.Journal
 addTransactionEnd t j = j { HL.jtxns = HL.jtxns j ++ [t] }
 
-doNextStep :: Bool -> AppState -> IO AppState
-doNextStep useSelected as = do
+doNextStep :: Bool -> EventM n AppState ()
+doNextStep useSelected = do
+  as <- get
   let inputText = editText as
       name = fromMaybe (Left inputText) $
-               msum [ Right <$> if useSelected then snd <$> listSelectedElement (asContext as) else Nothing
+               msum [ Right <$> if useSelected then snd <$> listSelectedElement (as^.asContext) else Nothing
                     , Left <$> asMaybe (editText as)
-                    , Left <$> asSuggestion as
+                    , Left <$> as^.asSuggestion
                     ]
-  s <- nextStep (asJournal as) (asDateFormat as) name (asStep as)
+  s <- liftIO $ nextStep (as^.asJournal) (as^.asDateFormat) name (as^.asStep)
   case s of
-    Left err -> return as { asMessage = err }
+    Left err -> asMessage .= err
     Right (Finished trans) -> do
-      liftIO $ addToJournal trans (asFilename as)
-      sugg <- suggest (asJournal as) (asDateFormat as) (DateQuestion "")
-      return AppState
-        { asStep = DateQuestion ""
-        , asJournal = addTransactionEnd trans (asJournal  as)
-        , asEditor = clearEdit (asEditor as)
-        , asContext = ctxList V.empty
-        , asSuggestion = sugg
-        , asMessage = "Transaction written to journal file"
-        , asFilename = asFilename as
-        , asDateFormat = asDateFormat as
-        , asMatchAlgo = asMatchAlgo as
-        , asDialog = NoDialog
-        , asInputHistory = []
-        }
+      liftIO $ addToJournal trans (as^.asFilename)
+      sugg <- liftIO $ suggest (as^.asJournal) (as^.asDateFormat) (DateQuestion "")
+      asStep .= DateQuestion ""
+      asJournal %= addTransactionEnd trans
+      asEditor %= clearEdit
+      asContext .= ctxList V.empty
+      asSuggestion .= sugg
+      asMessage .= "Transaction written to journal file"
+      asDialog .= NoDialog
+      asInputHistory .= []
     Right (Step s') -> do
-      sugg <- suggest (asJournal as) (asDateFormat as) s'
-      ctx' <- ctxList . V.fromList <$> context (asJournal as) (asMatchAlgo as) (asDateFormat as) "" s'
-      return as { asStep = s'
-                , asEditor = clearEdit (asEditor as)
-                , asContext = ctx'
-                , asSuggestion = sugg
-                , asMessage = ""
-                -- Adhere to the 'undo' behaviour: when in the final
-                -- confirmation question, 'undo' jumps back to the last amount
-                -- question instead of to the last account question. So do not
-                -- save the last empty account answer which indicates the end
-                -- of the transaction.
-                -- Furthermore, don't save the input if the FinalQuestion is
-                -- answered by 'n' (for no).
-                , asInputHistory = case (asStep as,s') of
-                    (FinalQuestion _ _, _) -> asInputHistory as
-                    (_, FinalQuestion _ _) -> asInputHistory as
-                    _                    -> inputText : asInputHistory as
-                }
+      sugg <- liftIO $ suggest (as^.asJournal) (as^.asDateFormat) s'
+      ctx' <- ctxList . V.fromList <$> liftIO (context (as^.asJournal) (as^.asMatchAlgo) (as^.asDateFormat) "" s')
+      asStep .= s'
+      asEditor %= clearEdit
+      asContext .= ctx'
+      asSuggestion .= sugg
+      asMessage .= ""
+      -- Adhere to the 'undo' behaviour: when in the final
+      -- confirmation question, 'undo' jumps back to the last amount
+      -- question instead of to the last account question. So do not
+      -- save the last empty account answer which indicates the end
+      -- of the transaction.
+      -- Furthermore, don't save the input if the FinalQuestion is
+      -- answered by 'n' (for no).
+      case (as^.asStep, s') of
+        (FinalQuestion _ _, _) -> return ()
+        (_, FinalQuestion _ _) -> return ()
+        _                      -> asInputHistory %= (inputText :)
 
-doUndo :: AppState -> IO AppState
-doUndo as = case undo (asStep as) of
-  Left msg -> return as { asMessage = "Undo failed: " <> msg }
+doUndo :: EventM n AppState ()
+doUndo = use asStep >>= \s -> case undo s of
+  Left msg -> asMessage .= "Undo failed: " <> msg
   Right step -> do
-    sugg <- suggest (asJournal as) (asDateFormat as) step
-    setContext $ as { asStep = step
-                    , asEditor = setEdit lastInput (asEditor as)
-                    , asSuggestion = sugg
-                    , asMessage = "Undo."
-                    , asInputHistory = historyTail
-                    }
-    where (lastInput,historyTail) =
-            case asInputHistory as of
-              x:t -> (x,t)
-              [] -> ("",[])
+    as <- get
+    let (lastInput,historyTail) =
+          case as^.asInputHistory of
+            x:t -> (x,t)
+            [] -> ("",[])
+
+    sugg <- liftIO $ suggest (as^.asJournal) (as^.asDateFormat) step
+    asStep .= step
+    asEditor %= setEdit lastInput
+    asSuggestion .= sugg
+    asMessage .= "Undo."
+    asInputHistory .= historyTail
+    setContext
 
 insertSelected :: AppState -> AppState
-insertSelected as = case listSelectedElement (asContext as) of
+insertSelected as = case listSelectedElement (as^.asContext) of
   Nothing -> as
-  Just (_, line) -> as { asEditor = setEdit line (asEditor as) }
+  Just (_, line) -> as & asEditor %~ setEdit line
 
 
 asMaybe :: Text -> Maybe Text
@@ -329,7 +333,7 @@ asMaybe t
 attrs :: AttrMap
 attrs = attrMap defAttr
   [ (listSelectedAttr, black `on` white)
-  , (helpAttr <> "title", fg green)
+  , (helpAttr <> attrName "title", fg green)
   ]
 
 clearEdit :: Editor n -> Editor n
@@ -541,7 +545,7 @@ main = do
                     , appChooseCursor = showFirstCursor
                     , appHandleEvent = event
                     , appAttrMap = const attrs
-                    , appStartEvent = return
+                    , appStartEvent = return ()
                     } :: App AppState Event Name
 
 expand :: Widget n -> Widget n
