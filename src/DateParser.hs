@@ -32,9 +32,10 @@ import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Builder (Builder, toLazyText)
 import qualified Data.Text.Lazy.Builder as Build
 import qualified Data.Text.Lazy.Builder.Int as Build
-import           Data.Time.Ext hiding (parseTime)
+import           Data.Time.Ext
 import           Data.Time.Calendar.WeekDate
 import qualified Hledger.Data.Dates as HL
+import qualified Hledger.Data.Types as HL
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Printf (printf, PrintfArg)
@@ -55,7 +56,9 @@ data DateSpec = DateYear
 
 parseHLDate :: Day -> Text -> Either Text Day
 parseHLDate current text = case parse HL.smartdate "date" text of
-  Right res -> Right $ HL.fixSmartDate current res
+  Right res -> case HL.fixSmartDate current res of
+    HL.Exact day -> Right day
+    HL.Flex day -> Left $ "Date " <> T.pack (show day) <> " not specified exactly."
   Left err -> Left $ T.pack $ errorBundlePretty err
 
 parseHLDateWithToday :: Text -> IO (Either Text Day)
