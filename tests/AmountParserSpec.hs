@@ -5,7 +5,7 @@ module AmountParserSpec (spec) where
 import           Test.Hspec
 
 import           Control.Monad.Trans.State.Strict
-import           Data.Either (either, isLeft)
+import           Data.Either (isLeft)
 import           Data.Functor.Identity
 import           Data.Text (Text)
 import qualified Hledger as HL

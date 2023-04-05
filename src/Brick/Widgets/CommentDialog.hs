@@ -10,8 +10,6 @@ module Brick.Widgets.CommentDialog
   , handleCommentEvent
   ) where
 
-import           Data.Semigroup ((<>))
-
 import           Brick
 import           Brick.Widgets.Dialog
 import           Brick.Widgets.Center
@@ -25,7 +23,6 @@ import           Lens.Micro.TH
 import           Lens.Micro.Mtl
 
 import           Brick.Widgets.Edit.EmacsBindings
-import Control.Monad.Trans.Reader
 
 data CommentWidget n = CommentWidget
   { _origComment :: Text

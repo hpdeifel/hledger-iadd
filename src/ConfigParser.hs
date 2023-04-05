@@ -49,7 +49,6 @@ import           Control.Applicative hiding (many, some)
 import           Control.Applicative.Free
 import           Control.Monad
 import           Data.Functor.Identity
-import           Data.Semigroup ((<>))
 import qualified Data.List.NonEmpty as NE
 
 import qualified Data.Set as S

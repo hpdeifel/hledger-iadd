@@ -28,7 +28,7 @@ import           Data.Monoid
 import           Data.Ord (Down(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time.Ext hiding (parseTime)
+import           Data.Time.Ext
 import qualified Hledger as HL
 import           Data.Foldable
 import           Control.Applicative

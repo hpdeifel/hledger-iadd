@@ -32,7 +32,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Functor.Identity (Identity(..), runIdentity)
 import Data.Maybe (fromMaybe, fromJust)
-import Data.Monoid ((<>), First(..), getFirst)
+import Data.Monoid (First(..), getFirst)
 import qualified Data.Semigroup as Sem
 import Data.Text (Text)
 import qualified Data.Text as T

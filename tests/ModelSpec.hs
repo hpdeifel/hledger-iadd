@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-# LANGUAGE TypeApplications #-}
 module ModelSpec (spec) where
 
 import           Test.Hspec
 
 import           Control.Monad
 import           Data.List
-import           Data.Semigroup ((<>))
 
 import           Data.Text (Text)
 import qualified Data.Text as T
