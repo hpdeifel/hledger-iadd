@@ -1,3 +1,8 @@
+# 1.3.18  [2023-04-05]
+
+  - dependencies: Update to hledger-lib 1.29
+  - dependencies: Update to brick 1.5
+
 # 1.3.17  [2022-03-15]
 
   - dependencies: Support brick 0.68
