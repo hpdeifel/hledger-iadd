@@ -232,7 +232,7 @@ suggestNextPosting current reference =
   let unusedPostings = filter (`notContainedIn` curPostings) refPostings
   in listToMaybe unusedPostings
 
-  where [refPostings, curPostings] = map HL.tpostings [reference, current]
+  where (refPostings, curPostings) = (HL.tpostings reference, HL.tpostings current)
         notContainedIn p = not . any (((==) `on` HL.paccount) p)
 
 -- | Given the last transaction entered, suggest the likely most comparable posting
@@ -249,7 +249,7 @@ suggestCorrespondingPosting current reference =
     Just (refPostings !! postingsEntered)
   else
     suggestNextPosting current reference
-  where [refPostings, curPostings] = map HL.tpostings [reference, current]
+  where (refPostings, curPostings) = (HL.tpostings reference, HL.tpostings current)
 
 findLastSimilar :: HL.Journal -> HL.Transaction -> Maybe HL.Transaction
 findLastSimilar journal desc =
