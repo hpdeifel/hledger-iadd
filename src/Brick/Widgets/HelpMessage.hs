@@ -79,7 +79,7 @@ handleHelpEvent _ = return ()
 
 
 resetHelpWidget :: HelpWidget n -> EventM n s ()
-resetHelpWidget = vScrollToBeginning . scroller
+resetHelpWidget x = vScrollToBeginning (scroller x)
 
 key :: Text -> Text -> Widget n
 key k h =  withAttr (helpAttr <> attrName "key") (txt ("  " <> k))
