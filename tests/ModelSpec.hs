@@ -193,7 +193,7 @@ isDuplicateTransactionSpec = do
         -- We use 'read' in the following because hledger-lib 1.19 changed the
         -- type of 'asprecision' from Int to 'AmountPrecision'. 'read' works in
         -- both cases.
-        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = HL.Precision 15 } }
+        a2 = (HL.eur 0.5) { HL.astyle = HL.amountstyle { HL.asprecision = Just (HL.Precision 15) } }
 
         p1 = mkPosting ("Test", -1)
         p2 = HL.nullposting { HL.paccount = "Toast", HL.pamount = HL.mixedAmount a1 }
@@ -212,7 +212,7 @@ isSubsetTransactionSpec =
         t2' = mkTransaction ((2021,3,12), "Test", [("Toast", -1)])
         testPosting = HL.nullposting
           { HL.paccount = "Test"
-          , HL.pamount = HL.mixed [ (HL.eur 1) { HL.astyle = HL.amountstyle { HL.asdecimalpoint = Just ';' }}]}
+          , HL.pamount = HL.mixed [ (HL.eur 1) { HL.astyle = HL.amountstyle { HL.asdecimalmark = Just ';' }}]}
         t2 = t2' { HL.tpostings =  testPosting : HL.tpostings t2' }
     isSubsetTransaction t1 t2 `shouldBe` True
 
