@@ -1,4 +1,4 @@
-# NEXT VERSION
+# 1.3.19  [2023-09-15]
 
   - dependencies: Update to hledger-lib 1.31
   - dependencies: Allow megaparsec 9.5
