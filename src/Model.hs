@@ -82,7 +82,7 @@ nextStep journal dateFormat entryText current = case current of
       in AccountQuestion (addPosting newPosting trans) ""
 
   FinalQuestion trans _
-    | fromEither entryText == "y" -> return $ Right $ Finished trans
+    | fromEither entryText `elem` ["y", "Y"] -> return $ Right $ Finished trans
     | otherwise -> return $ Right $ Step $ AccountQuestion trans ""
 
 -- | Reverses the last step.

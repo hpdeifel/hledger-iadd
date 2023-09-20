@@ -170,12 +170,12 @@ event (VtyEvent ev) = use asDialog >>= \case
     _ -> return ()
   QuitDialog -> case ev of
     EvKey key []
-      | key `elem` [KChar 'y', KEnter] -> halt
+      | key `elem` [KChar 'y', KChar 'Y', KEnter] -> halt
       | otherwise -> asDialog .= NoDialog
     _ -> return ()
   AbortDialog -> case ev of
     EvKey key []
-      | key `elem` [KChar 'y', KEnter] -> do
+      | key `elem` [KChar 'y', KChar 'Y', KEnter] -> do
           asDialog .= NoDialog
           reset
       | otherwise -> asDialog .= NoDialog
