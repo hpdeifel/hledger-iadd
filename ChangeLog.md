@@ -2,6 +2,7 @@
 
   - feature: Make 'Y/n' prompts case-insensitive
   - dependencies: Update to hledger-lib 1.32
+  - dependencies: Allow megaparsec 9.6
 
 # 1.3.19  [2023-09-15]
 
