@@ -1,5 +1,10 @@
 packages:
   - .
 extra-deps:
- - hledger-lib-1.15.2
-resolver: lts-14.14
+ - brick-2.1.1
+ - vty-6.1
+ - vty-crossplatform-0.4.0.0
+ - vty-unix-0.2.0.0
+ - vty-windows-0.2.0.1
+ - hledger-lib-1.32.2
+resolver: lts-21.25
