@@ -5,6 +5,7 @@ module DateParserSpec (spec) where
 
 import           Test.Hspec
 import           Test.QuickCheck
+import           Test.QuickCheck.Instances()
 
 import           Control.Monad
 import           Data.Either
@@ -197,6 +198,3 @@ printReadProp :: DateFormat -> Day -> Property
 printReadProp format day = case parseDate day format (printDate format day) of
   Left err -> counterexample (T.unpack err) False
   Right res -> res === day
-
-instance Arbitrary Day where
-  arbitrary = ModifiedJulianDay <$> arbitrary

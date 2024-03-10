@@ -124,6 +124,7 @@ test-suite spec
                     , vector
                     , hspec
                     , QuickCheck
+                    , quickcheck-instances
                     , free >= 4.12.4
                     , megaparsec >= 7.0 && <9.7
                     , text-zipper >= 0.10
