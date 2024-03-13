@@ -30,9 +30,11 @@ copyright:           2018 Hans-Peter Deifel
 category:            Finance, Console
 build-type:          Simple
 cabal-version:       >=1.10
-tested-with:         GHC ==8.6.5
-                   , GHC ==8.8.4
-                   , GHC ==8.10.4
+tested-with:         GHC ==8.10.7
+                   , GHC ==9.0.2
+                   , GHC ==9.2.8
+                   , GHC ==9.4.8
+                   , GHC ==9.6.3
 
 extra-source-files:
   doc/screencast.gif
@@ -59,7 +61,7 @@ library
                      , Brick.Widgets.Border.Utils
                      , Data.Time.Ext
   default-language:    Haskell2010
-  build-depends:       base >= 4.12 && < 5
+  build-depends:       base >= 4.14 && < 5
                      , hledger-lib >= 1.29 && < 1.33
                      , brick >= 1.5
                      , vty >= 5.4
@@ -85,7 +87,7 @@ executable hledger-iadd
   main-is:             Main.hs
   other-modules:       Paths_hledger_iadd
   default-language:    Haskell2010
-  build-depends:       base >= 4.12 && < 5
+  build-depends:       base >= 4.14 && < 5
                      , hledger-iadd
                      , hledger-lib >= 1.29 && <1.33
                      , brick >= 1.5
@@ -115,7 +117,7 @@ test-suite spec
                     , AmountParserSpec
                     , ModelSpec
   default-language:   Haskell2010
-  build-depends:      base >= 4.12 && < 5
+  build-depends:      base >= 4.14 && < 5
                     , hledger-iadd
                     , hledger-lib >= 1.32 && <1.33
                     , text
