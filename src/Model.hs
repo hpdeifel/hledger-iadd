@@ -354,7 +354,7 @@ isDuplicateTransaction  journal trans = any ((==EQ) . cmpTransaction trans) (HL.
 
     -- | Ammount attributes that are compared to determine duplicates
     amountAttributes =
-      [ cmp HL.acommodity, cmp HL.aprice, cmp HL.aquantity ]
+      [ cmp HL.acommodity, cmp HL.acost, cmp HL.aquantity ]
 
     -- | Compare two transactions but ignore unimportant details
     cmpTransaction :: HL.Transaction -> HL.Transaction -> Ordering
