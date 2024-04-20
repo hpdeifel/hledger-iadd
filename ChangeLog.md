@@ -1,4 +1,4 @@
-# NEXT VERSION
+# 1.3.21  [2024-04-20]
 
   - dependencies: Bump brick and vty versions
   - Update to hledger-lib 1.33
