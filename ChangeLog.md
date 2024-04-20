@@ -1,3 +1,8 @@
+# NEXT VERSION
+
+  - dependencies: Bump brick and vty versions
+  - Update to hledger-lib 1.33
+
 # 1.3.20  [2024-01-10]
 
   - feature: Make 'Y/n' prompts case-insensitive
