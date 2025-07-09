@@ -187,9 +187,14 @@ parseEnglish current = ($ current) <$> choice (relativeDays ++ weekDays)
 relativeDays :: [Parser (Day -> Day)]
 relativeDays = map try
   [ addDays 1    <$ string "tomorrow"
+  , addDays 1    <$ string "tom"
   , id           <$ string "today"
+  , id           <$ string "tod"
   , addDays (-1) <$ string "yesterday"
   , addDays (-1) <$ string "yest"
+  , addDays (-1) <$ string "yes"
+  , addDays (-1) <$ string "ye"
+  , addDays (-1) <$ string "y"
   ]
 
 weekDays :: [Parser (Day -> Day)]
@@ -200,13 +205,13 @@ weekDays = map (\(i, name) -> weekDay i <$ try (string name)) sortedDays
         flattenedDays :: [(Int, Text)]
         flattenedDays = concatMap (\(i, xs) -> fmap (i,) xs) days
         days :: [(Int, [Text])]
-        days = [ (1, ["monday", "mon"])
-               , (2, ["tuesday", "tues", "tue"])
-               , (3, ["wednesday", "wed"])
-               , (4, ["thursday", "thur"])
-               , (5, ["friday", "fri"])
-               , (6, ["saturday", "sat"])
-               , (7, ["sunday", "sun"])
+        days = [ (1, ["monday", "m", "mo", "mon"])
+               , (2, ["tuesday", "tu", "tue", "tues"])
+               , (3, ["wednesday", "w", "we", "wed"])
+               , (4, ["thursday", "th", "thu", "thur"])
+               , (5, ["friday", "f", "fr", "fri"])
+               , (6, ["saturday", "sa", "sat"])
+               , (7, ["sunday", "su", "sun"])
                ]
 
 -- | Computes a relative date by the given weekday

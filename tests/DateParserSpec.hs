@@ -108,6 +108,7 @@ dateCompletionTests = describe "date completion" $ do
   it "literally yesterday" $ do
     parseGerman 2018 10 18 "yesterday" `shouldBe` Right (fromGregorian 2018 10 17)
     parseGerman 2018 10 18 "yest" `shouldBe` Right (fromGregorian 2018 10 17)
+    parseGerman 2018 10 18 "yes" `shouldBe` Right (fromGregorian 2018 10 17)
 
   it "literally today" $ do
     parseGerman 2018 10 18 "today" `shouldBe` Right (fromGregorian 2018 10 18)
@@ -118,6 +119,8 @@ dateCompletionTests = describe "date completion" $ do
   it "literally monday" $ do
     parseGerman 2018 10 18 "monday" `shouldBe` Right (fromGregorian 2018 10 15)
     parseGerman 2018 10 18 "mon" `shouldBe` Right (fromGregorian 2018 10 15)
+    parseGerman 2018 10 18 "mo" `shouldBe` Right (fromGregorian 2018 10 15)
+    parseGerman 2018 10 18 "m" `shouldBe` Right (fromGregorian 2018 10 15)
 
   it "literally tuesday" $ do
     parseGerman 2018 10 18 "tuesday" `shouldBe` Right (fromGregorian 2018 10 16)

@@ -1,3 +1,8 @@
+# NEXT RELEASE
+
+  - feature: Add more abbreviations for weekdays ("m", "mo", ...)
+  - dependencies: Bump brick, vty, megaparsec and hledger-lib
+
 # 1.3.21  [2024-04-20]
 
   - dependencies: Bump brick and vty versions
