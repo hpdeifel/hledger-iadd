@@ -528,7 +528,9 @@ main = do
   let path = runIdentity $ optLedgerFile opts
   journalContents <- T.readFile path
 
-  runExceptT (HL.parseAndFinaliseJournal HL.journalp HL.definputopts path journalContents) >>= \case
+  let hlIopts = HL.definputopts
+
+  runExceptT (HL.parseAndFinaliseJournal (HL.journalp hlIopts) hlIopts path journalContents) >>= \case
     Left err -> hPutStrLn stderr err >> exitFailure
     Right journal -> do
       let edit = editorText EditorName (txt . T.concat) (Just 1) ""
