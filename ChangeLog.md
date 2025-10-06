@@ -1,3 +1,7 @@
+NEXT RELEASE
+
+  - dependencies: Bump brick and vty
+
 # 1.3.22  [2025-09-17]
 
   - feature: Add more abbreviations for weekdays ("m", "mo", ...)
