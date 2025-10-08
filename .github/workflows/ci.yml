@@ -1,0 +1,54 @@
+name: ci
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup GHC
+      uses: haskell-actions/setup@v2
+      with:
+        ghc-version: '9.6.7'
+        cabal-version: '3.12'
+        cabal-update: true
+
+    # Generate plan.json for the cache key
+    - name: Configure the build
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --disable-documentation
+        cabal build all --dry-run
+
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id: cache
+      env:
+        key: ${{ runner.os }}-ghc-${{ steps.setup.outputs.ghc-version }}-cabal-${{ steps.setup.outputs.cabal-version }}
+      with:
+        path: ${{ steps.setup.outputs.cabal-store }}
+        key: ${{ env.key }}-plan-${{ hashFiles('**/plan.json') }}
+        restore-keys: ${{ env.key }}-
+
+    - name: Install dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: cabal build all --only-dependencies
+
+    - name: Save cached dependencies
+      uses: actions/cache/save@v4
+      if: steps.cache.outputs.cache-hit != 'true'
+      with:
+        path: ${{ steps.setup.outputs.cabal-store }}
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
+    - name: Build
+      run: cabal build all
+
+    - name: Run tests
+      run: cabal test all
