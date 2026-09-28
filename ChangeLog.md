@@ -1,4 +1,4 @@
-# NEXT VERSION
+# 1.3.23  [2026-09-28]
 
   - dependencies: Allow hledger-lib 1.52, vty 6.6, megaparsec 9.9
   - dependencies: Update to brick >= 3.0
