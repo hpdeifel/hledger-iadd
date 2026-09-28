@@ -21,7 +21,7 @@ center w = Widget Fixed Fixed $ do
       x = (c^.availWidthL `div` 2) - (rWidth `div` 2)
       y = (c^.availHeightL `div` 2) - (rHeight `div` 2)
 
-  render $ translateBy (Location (x,y)) $ raw (res^.imageL)
+  render $ translateLayer (Location (x,y)) $ raw (res^.imageL)
 
 dialog' :: Text -> Text -> Widget n
 dialog' title content = Widget Fixed Fixed $ do
