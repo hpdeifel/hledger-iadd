@@ -1,6 +1,7 @@
 # NEXT RELEASE
 
-  - dependencies: Bump brick and vty
+  - dependencies: Allow hledger-lib 1.52, vty 6.6, megaparsec 9.9
+  - dependencies: Update to brick >= 3.0
 
 # 1.3.22  [2025-09-17]
 
